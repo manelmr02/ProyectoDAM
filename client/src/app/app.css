@@ -1,0 +1,296 @@
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-height: 100vh;
+}
+
+/* Navbar */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  border-radius: 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: 0.1em;
+}
+
+.logo-icon {
+  font-size: 1.8rem;
+  color: var(--accent-gold);
+}
+
+.logo-text .highlight {
+  color: var(--accent-primary);
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-item {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+  transition: color var(--transition-fast);
+  position: relative;
+}
+
+.nav-item:hover, .nav-item.active {
+  color: var(--text-main);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent-secondary);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--accent-secondary);
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.2);
+  padding: 8px 16px 8px 8px;
+  border-radius: 30px;
+  border: 1px solid var(--border-light);
+}
+
+.level-badge {
+  background: var(--accent-primary);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bg-panel-hover), var(--bg-panel));
+  border: 2px solid var(--accent-secondary);
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* Hero Section */
+.hero-section {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 48px;
+  align-items: center;
+  padding: 64px;
+  border-radius: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle background glow for hero */
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: -50%; right: -20%;
+  width: 100%; height: 200%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  z-index: 1;
+}
+
+.badge {
+  align-self: flex-start;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-success);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.hero-content h1 {
+  font-size: 4rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.highlight-gradient {
+  background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 90%;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.play-btn {
+  font-size: 1.2rem;
+  padding: 16px 48px;
+  animation: pulseGlow 2s infinite;
+}
+
+/* Champion Featured Area */
+.champion-card {
+  width: 100%;
+  padding: 16px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.03);
+  transform: perspective(1000px) rotateY(-5deg);
+  transition: transform 0.5s ease;
+}
+
+.champion-card:hover {
+  transform: perspective(1000px) rotateY(0deg) translateY(-10px);
+}
+
+.card-image-placeholder {
+  width: 100%;
+  height: 300px;
+  border-radius: 16px;
+  background: linear-gradient(45deg, #1e293b, #334155);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  background-image: url('/faction_war.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.card-info h3 {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+}
+
+.rolemage {
+  color: var(--accent-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* News Section */
+.news-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.news-section h2 {
+  font-size: 2rem;
+  color: var(--text-main);
+  padding-left: 16px;
+  border-left: 4px solid var(--accent-primary);
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.news-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.hover-scale {
+  transition: all var(--transition-normal);
+}
+
+.hover-scale:hover {
+  transform: translateY(-5px);
+  background: var(--bg-panel-hover);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.news-tag {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.news-tag.patch { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.news-tag.event { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+.news-tag.esports { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+
+.news-card h4 {
+  font-size: 1.2rem;
+}
+
+.news-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .hero-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 40px 24px;
+  }
+  .badge { align-self: center; }
+  .subtitle { max-width: 100%; }
+  .action-buttons { justify-content: center; }
+  .nav-links { display: none; }
+  .champion-card {
+    transform: none;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .champion-card:hover { transform: translateY(-5px); }
+  .hero-section::before { display: none; }
+}

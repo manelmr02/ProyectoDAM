@@ -1,0 +1,24 @@
+<div class="tech-grid"></div>
+
+<div class="app-container">
+  <nav class="top-nav glass-panel animate-fade-in" style="animation-delay: 0.1s;">
+    <a routerLink="/" class="logo" style="text-decoration: none; color: inherit;">
+      <span class="logo-icon">🛡️</span>
+      <span class="logo-text">FACTION <span class="highlight">WARS</span></span>
+    </a>
+    
+    <div class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
+      <a routerLink="/lobby" routerLinkActive="active" class="nav-item">Lobby (Todos vs Todos)</a>
+      <a routerLink="/ranking" routerLinkActive="active" class="nav-item">Clasificación</a>
+    </div>
+
+    <div class="user-profile" style="cursor: pointer;" routerLink="/login">
+      <div class="level-badge">#</div>
+      <div class="avatar-placeholder"></div>
+      <span class="username">Iniciar Sesión</span>
+    </div>
+  </nav>
+
+  <router-outlet></router-outlet>
+</div>
