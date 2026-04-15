@@ -2,11 +2,12 @@
 
 <div class="app-container">
   <nav class="top-nav glass-panel animate-fade-in" style="animation-delay: 0.1s;">
-    <a routerLink="/" class="logo" style="text-decoration: none; color: inherit;">
-      <span class="logo-icon">🛡️</span>
-      <span class="logo-text">FACTION <span class="highlight">WARS</span></span>
+    <a routerLink="/" class="logo"
+      style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
+      <img src="logoMin.png" alt="Logo Payload" style="height: 32px; width: auto; object-fit: contain;">
+      <span class="logo-text">PAYLOAD <span class="highlight">STRATEGIC STRIKE</span></span>
     </a>
-    
+
     <div class="nav-links">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
       <a routerLink="/lobby" routerLinkActive="active" class="nav-item">Lobby (Todos vs Todos)</a>
