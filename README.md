@@ -7,3 +7,10 @@ Repositorio dedicado al proyecto de fin de grado de 2ºDAM
 3. Ejecutar npm install.
 4. Ejecutar npx ng serve.
 
+- [x] Default
+- [ ] Usability improvement
+- [ ] BBDD SQL
+- [ ] BBDD NoSQL
+- [ ] Sockets Connection
+
+
