@@ -164,16 +164,61 @@
   max-width: 90%;
 }
 
+/* Action Panel Styling */
+.action-panel {
+  margin-top: 32px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.action-panel-header h3 {
+  color: var(--text-main);
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.action-panel-header p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .action-buttons {
   display: flex;
-  gap: 16px;
-  margin-top: 16px;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
 }
 
 .play-btn {
-  font-size: 1.2rem;
-  padding: 16px 48px;
+  font-size: 1.1rem;
+  padding: 16px 32px;
+  flex: 1;
   animation: pulseGlow 2s infinite;
+}
+
+.ranking-btn {
+  flex: 1;
+  padding: 16px 24px;
+}
+
+.action-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin: 0 8px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 /* Champion Featured Area */
@@ -276,20 +321,84 @@
   line-height: 1.5;
 }
 
+/* Footer layout */
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-light);
+  padding: 32px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color var(--transition-fast);
+}
+
+.footer-links a:hover {
+  color: var(--accent-secondary);
+}
+
+.footer-divider {
+  width: 60px;
+  height: 2px;
+  background: var(--accent-primary);
+  border-radius: 2px;
+  margin: 8px 0;
+}
+
+.footer-copy {
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 0.85rem;
+}
+
+/* Ensure flex container pushes footer */
+.router-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 1024px) {
   .hero-section {
     grid-template-columns: 1fr;
     text-align: center;
     padding: 40px 24px;
+    gap: 40px; /* Explicit spacing between grid items when stacked */
   }
   .badge { align-self: center; }
   .subtitle { max-width: 100%; }
-  .action-buttons { justify-content: center; }
+  
+  .action-buttons { 
+    justify-content: center; 
+    flex-direction: column; 
+    gap: 16px; /* Ensuring gap for flex column */
+  }
+  .action-divider { display: none; } /* Hide the divider orb on mobile */
+  
+  .play-btn { margin-bottom: 8px; } /* Extra safety margin if gap defaults */
+  .play-btn, .ranking-btn { width: 100%; }
+  
   .nav-links { display: none; }
+  
   .champion-card {
     transform: none;
     max-width: 400px;
     margin: 0 auto;
+    margin-top: 16px;
   }
   .champion-card:hover { transform: translateY(-5px); }
   .hero-section::before { display: none; }

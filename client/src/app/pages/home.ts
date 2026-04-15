@@ -12,12 +12,21 @@ import { RouterLink } from '@angular/router';
         <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
         <p class="subtitle">Decide el destino de tu facción. Ataca a tus rivales o asegura tus defensas sin saber cuál será el próximo movimiento de tus enemigos en este enfrentamiento todos contra todos.</p>
         
-        <div class="action-buttons">
-          <button routerLink="/lobby" class="btn btn-primary play-btn">
-            <span class="pulse-ring"></span>
-            UNIRSE AL LOBBY
-          </button>
-          <button routerLink="/ranking" class="btn btn-secondary">VER CLASIFICACIÓN</button>
+        <div class="action-panel glass-panel">
+          <div class="action-panel-header">
+            <h3>¿Listo para el combate?</h3>
+            <p>Únete a la sala de espera táctica o revisa la tabla de posiciones.</p>
+          </div>
+          <div class="action-buttons">
+            <button routerLink="/lobby" class="btn btn-primary play-btn">
+              <span class="pulse-ring"></span>
+              <i class="icon-swords"></i> UNIRSE AL LOBBY
+            </button>
+            <div class="action-divider"></div>
+            <button routerLink="/ranking" class="btn btn-secondary ranking-btn">
+              VER CLASIFICACIÓN
+            </button>
+          </div>
         </div>
       </div>
       
@@ -57,4 +66,4 @@ import { RouterLink } from '@angular/router';
   </main>
   `
 })
-export class Home {}
+export class Home { }
