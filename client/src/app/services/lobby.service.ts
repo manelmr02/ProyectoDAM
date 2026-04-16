@@ -81,6 +81,11 @@ const NPC_CHATS: { sender: string; text: string }[] = [
 @Injectable({ providedIn: 'root' })
 export class LobbyService {
   private auth = inject(AuthService);
+  private readonly onStorageChange = (event: StorageEvent) => {
+    if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
+    this.syncFromStorage();
+  };
+  private readonly onWindowFocus = () => this.syncFromStorage();
 
   /** All lobbies — reactive signal */
   readonly lobbies = signal<LobbyEntry[]>(this.load());
@@ -88,6 +93,12 @@ export class LobbyService {
   readonly activeCount = computed(
     () => this.lobbies().filter(l => l.status === 'Esperando').length
   );
+
+  constructor() {
+    window.addEventListener('storage', this.onStorageChange);
+    window.addEventListener('focus', this.onWindowFocus);
+    document.addEventListener('visibilitychange', this.onWindowFocus);
+  }
 
   // ── Persistence ─────────────────────────────────────────────────────────────
 
@@ -115,6 +126,14 @@ export class LobbyService {
   private save(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.lobbies()));
     localStorage.setItem(STORAGE_VER, CURRENT_VER.toString());
+  }
+
+  private syncFromStorage(): void {
+    const latest = this.load();
+    const current = this.lobbies();
+    if (JSON.stringify(latest) !== JSON.stringify(current)) {
+      this.lobbies.set(latest);
+    }
   }
 
   // ── Seed (initial demo data) ─────────────────────────────────────────────────
