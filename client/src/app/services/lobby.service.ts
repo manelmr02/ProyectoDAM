@@ -217,7 +217,14 @@ export class LobbyService {
 
   createLobby(dto: CreateLobbyDto): LobbyEntry {
     const user = this.auth.currentUser();
-    const host = user?.username ?? 'Estratega Maestro';
+    if (!user) {
+      throw new Error('No has iniciado sesión.');
+    }
+    const host = user.username;
+
+    // Prevent creating multiple rooms: remove all previous owned rooms
+    this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
+
     const authorColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
     const lobby: LobbyEntry = {
@@ -250,14 +257,16 @@ export class LobbyService {
   /** Add the current user to an existing lobby (or find the first open one) */
   joinLobby(id: number): LobbyEntry | null {
     const user = this.auth.currentUser();
-    const username = user?.username ?? 'Invitado';
-    const clan     = user?.clan   ?? '';
+    if (!user) return null; // Block unauthenticated users
+    const username = user.username;
+    const clan     = user.clan ?? '';
 
-    let target = this.getLobbyById(id);
-    if (!target || target.status === 'En curso' || target.players >= target.maxPlayers) return null;
+    const target = this.getLobbyById(id);
+    if (!target || target.status === 'En curso') return null;
 
     // Don't double-add
     const alreadyIn = target.playerList.some(p => p.name === username);
+    if (!alreadyIn && target.players >= target.maxPlayers) return null;
     if (!alreadyIn) {
       const updated: LobbyEntry = {
         ...target,

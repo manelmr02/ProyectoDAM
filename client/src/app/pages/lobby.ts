@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { LobbyService, LobbyEntry, LobbyPlayer } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
+import { DOCUMENT } from '@angular/common';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
@@ -25,15 +26,26 @@ const PHRASES: { sender: string; text: string }[] = [
   selector: 'app-lobby',
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
+    <!-- Not authenticated -->
+    <div class="lobby-empty animate-fade-in" *ngIf="notAuthenticated()">
+      <span class="lobby-empty-icon">🔒</span>
+      <h3>Sesión no iniciada</h3>
+      <p>Debes iniciar sesión para acceder a una sala de juego.</p>
+      <div style="display:flex; gap:12px; margin-top:8px;">
+        <a routerLink="/login" class="btn btn-primary" style="text-decoration:none;">INICIAR SESIÓN</a>
+        <a routerLink="/" class="btn btn-secondary" style="text-decoration:none;">← Volver al inicio</a>
+      </div>
+    </div>
+
     <!-- Loading -->
-    <div class="lobby-empty animate-fade-in" *ngIf="!lobby()">
+    <div class="lobby-empty animate-fade-in" *ngIf="!notAuthenticated() && !lobby()">
       <span class="lobby-empty-icon">🔭</span>
       <h3>Sala no encontrada</h3>
       <p>La sala fue eliminada o el enlace es incorrecto.</p>
       <a routerLink="/" class="btn btn-primary" style="margin-top:8px; text-decoration:none;">← Volver al inicio</a>
     </div>
 
-    <div class="lobby-container animate-fade-in" *ngIf="lobby()">
+    <div class="lobby-container animate-fade-in" *ngIf="!notAuthenticated() && lobby()">
 
       <!-- Header -->
       <div class="lobby-header glass-panel">
@@ -55,6 +67,9 @@ const PHRASES: { sender: string; text: string }[] = [
           </div>
         </div>
         <div class="lobby-action">
+          <button class="btn btn-share" (click)="shareLobby()" title="Compartir enlace de la sala">
+            📋 COMPARTIR
+          </button>
           <button class="btn btn-danger-link" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
             🗑 BORRAR SALA
           </button>
@@ -63,6 +78,11 @@ const PHRASES: { sender: string; text: string }[] = [
             <span *ngIf="isReady()">⏸ CANCELAR</span>
           </button>
         </div>
+      </div>
+
+      <!-- Share toast -->
+      <div class="share-toast" *ngIf="showShareToast()">
+        ✅ Enlace copiado al portapapeles
       </div>
 
       <!-- DELETE CONFIRMATION MODAL -->
@@ -138,12 +158,13 @@ const PHRASES: { sender: string; text: string }[] = [
           <form class="chat-input-area" (ngSubmit)="sendMessage()">
             <input
               type="text"
-              placeholder="Escribe al lobby..."
+              [placeholder]="auth.isLoggedIn() ? 'Escribe al lobby...' : 'Inicia sesión para escribir'"
               [(ngModel)]="chatInput"
               name="chatInput"
               id="chat-input"
-              autocomplete="off">
-            <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+              autocomplete="off"
+              [disabled]="!auth.isLoggedIn()">
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="!auth.isLoggedIn()">Enviar</button>
           </form>
         </div>
       </div>
@@ -265,8 +286,32 @@ const PHRASES: { sender: string; text: string }[] = [
     }
     .chat-input-area input:focus { border-color: var(--accent-secondary); }
     .btn-sm { padding: 8px 18px; font-size: 0.88rem; white-space: nowrap; }
+    .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-sm { padding: 8px 18px; font-size: 0.88rem; white-space: nowrap; }
+    /* Share button */
+    .btn-share {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white; border: none; padding: 8px 16px;
+      font-size: 0.85rem; font-weight: 700;
+      transition: all var(--transition-normal);
+    }
+    .btn-share:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
+
+    /* Share toast */
+    .share-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(16, 185, 129, 0.95); color: white;
+      padding: 12px 24px; border-radius: 12px;
+      font-weight: 700; font-size: 0.9rem;
+      z-index: 3000; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+      animation: toastIn 0.3s ease-out;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+    .chat-input-area input:disabled {
+      opacity: 0.5; cursor: not-allowed;
+      background: rgba(0,0,0,0.15);
+    }
 
     /* Modal Styles (extracted for consistency) */
     .modal-overlay {
@@ -308,17 +353,19 @@ const PHRASES: { sender: string; text: string }[] = [
 export class Lobby implements OnInit, OnDestroy {
   private route         = inject(ActivatedRoute);
   private lobbyService  = inject(LobbyService);
-  private auth          = inject(AuthService);
+  readonly auth          = inject(AuthService);
 
   lobby   = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
   isReady = signal(false);
   showDeleteModal = signal(false);
+  showShareToast = signal(false);
+  notAuthenticated = signal(false);
   chatInput = '';
 
   private timers: ReturnType<typeof setTimeout>[] = [];
 
-  myName = computed(() => this.auth.currentUser()?.username ?? 'Estratega Maestro');
+  myName = computed(() => this.auth.currentUser()?.username ?? '');
   
   isHost = computed(() => {
     const l = this.lobby();
@@ -339,6 +386,12 @@ export class Lobby implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    // Auth guard: block if not logged in
+    if (!this.auth.currentUser()) {
+      this.notAuthenticated.set(true);
+      return;
+    }
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     const found = this.lobbyService.getLobbyById(id);
 
@@ -435,11 +488,25 @@ export class Lobby implements OnInit, OnDestroy {
   }
 
   sendMessage() {
+    if (!this.auth.currentUser()) return;
     const text = this.chatInput.trim();
     if (!text) return;
     this.addMsg(this.myName(), text);
     this.chatInput = '';
     this.scrollChat();
+  }
+
+  shareLobby() {
+    const l = this.lobby();
+    if (!l) return;
+    const url = `${window.location.origin}/lobby/${l.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showShareToast.set(true);
+      setTimeout(() => this.showShareToast.set(false), 2500);
+    }).catch(() => {
+      // Fallback: prompt
+      window.prompt('Copia este enlace:', url);
+    });
   }
 
   private addSystem(text: string) {
