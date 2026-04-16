@@ -25,15 +25,29 @@ const PHRASES: { sender: string; text: string }[] = [
   selector: 'app-lobby',
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <!-- Loading -->
-    <div class="lobby-empty animate-fade-in" *ngIf="!lobby()">
+    <!-- Not logged in -->
+    <div class="lobby-empty animate-fade-in" *ngIf="!auth.isLoggedIn()">
+      <span class="lobby-empty-icon">🔒</span>
+      <h3>Sesión no iniciada</h3>
+      <p>Necesitas iniciar sesión para acceder a una sala de combate.</p>
+      <a routerLink="/login" class="btn btn-primary" style="margin-top:8px; text-decoration:none;">Iniciar Sesión</a>
+      <a routerLink="/" class="btn btn-secondary" style="margin-top:4px; text-decoration:none;">← Volver al inicio</a>
+    </div>
+
+    <!-- Lobby not found -->
+    <div class="lobby-empty animate-fade-in" *ngIf="auth.isLoggedIn() && !lobby()">
       <span class="lobby-empty-icon">🔭</span>
       <h3>Sala no encontrada</h3>
       <p>La sala fue eliminada o el enlace es incorrecto.</p>
       <a routerLink="/" class="btn btn-primary" style="margin-top:8px; text-decoration:none;">← Volver al inicio</a>
     </div>
 
-    <div class="lobby-container animate-fade-in" *ngIf="lobby()">
+    <!-- Copied toast -->
+    <div class="copied-toast" *ngIf="showCopiedToast()">
+      <span>✅ Enlace de sala copiado al portapapeles</span>
+    </div>
+
+    <div class="lobby-container animate-fade-in" *ngIf="auth.isLoggedIn() && lobby()">
 
       <!-- Header -->
       <div class="lobby-header glass-panel">
@@ -55,6 +69,9 @@ const PHRASES: { sender: string; text: string }[] = [
           </div>
         </div>
         <div class="lobby-action">
+          <button class="btn-share-lobby" (click)="shareLobby()" title="Compartir enlace de sala">
+            📋 COMPARTIR
+          </button>
           <button class="btn btn-danger-link" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
             🗑 BORRAR SALA
           </button>
@@ -172,8 +189,31 @@ const PHRASES: { sender: string; text: string }[] = [
     .lobby-sub-info { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
     .sep { opacity: 0.4; }
     .text-success { color: var(--accent-success); font-weight: 700; }
-    .lobby-action { flex-shrink: 0; display: flex; align-items: center; gap: 16px; }
+    .lobby-action { flex-shrink: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
     
+    .btn-share-lobby {
+      background: rgba(6,182,212,0.1);
+      border: 1px solid rgba(6,182,212,0.3);
+      color: var(--accent-secondary);
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: var(--font-heading);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.04em;
+    }
+    .btn-share-lobby:hover {
+      background: rgba(6,182,212,0.2);
+      border-color: var(--accent-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(6,182,212,0.3);
+    }
+
     .btn-danger-link {
       background: transparent;
       border: 1px solid rgba(239, 68, 68, 0.3);
@@ -187,6 +227,10 @@ const PHRASES: { sender: string; text: string }[] = [
       background: rgba(239, 68, 68, 0.1);
       border-color: #ef4444;
     }
+
+    /* Copied toast */
+    .copied-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: var(--accent-success); padding: 12px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; z-index: 9999; animation: fadeIn 0.3s ease forwards; }
+    @keyframes fadeIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
 
     /* ── Grid ── */
     .lobby-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-height: 500px; }
@@ -308,17 +352,18 @@ const PHRASES: { sender: string; text: string }[] = [
 export class Lobby implements OnInit, OnDestroy {
   private route         = inject(ActivatedRoute);
   private lobbyService  = inject(LobbyService);
-  private auth          = inject(AuthService);
+  readonly auth         = inject(AuthService);
 
   lobby   = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
   isReady = signal(false);
   showDeleteModal = signal(false);
+  showCopiedToast = signal(false);
   chatInput = '';
 
   private timers: ReturnType<typeof setTimeout>[] = [];
 
-  myName = computed(() => this.auth.currentUser()?.username ?? 'Estratega Maestro');
+  myName = computed(() => this.auth.currentUser()?.username ?? '');
   
   isHost = computed(() => {
     const l = this.lobby();
@@ -339,6 +384,11 @@ export class Lobby implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    // Block unauthenticated users
+    if (!this.auth.isLoggedIn()) {
+      return;
+    }
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     const found = this.lobbyService.getLobbyById(id);
 
@@ -436,10 +486,21 @@ export class Lobby implements OnInit, OnDestroy {
 
   sendMessage() {
     const text = this.chatInput.trim();
-    if (!text) return;
+    if (!text || !this.auth.isLoggedIn()) return;
     this.addMsg(this.myName(), text);
     this.chatInput = '';
     this.scrollChat();
+  }
+
+  /** Share lobby link to clipboard */
+  shareLobby() {
+    const l = this.lobby();
+    if (!l) return;
+    const url = `${window.location.origin}/lobby/${l.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showCopiedToast.set(true);
+      setTimeout(() => this.showCopiedToast.set(false), 2500);
+    });
   }
 
   private addSystem(text: string) {

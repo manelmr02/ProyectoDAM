@@ -13,7 +13,7 @@ import { AuthService } from '../services/auth.service';
   <main class="main-content">
 
     <!-- ═══════════════ HERO ═══════════════ -->
-    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
+    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s; margin-bottom: 8px;">
       <div class="hero-content">
         <span class="badge">Fase de Preparación Activa</span>
         <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
@@ -49,7 +49,7 @@ import { AuthService } from '../services/auth.service';
     </section>
 
     <!-- ═══════════════ LOBBIES ═══════════════ -->
-    <section class="lobbies-section animate-fade-in" style="animation-delay: 0.4s;">
+    <section class="lobbies-section animate-fade-in" style="animation-delay: 0.4s; margin: 24px 0;">
       <div class="lobbies-header">
         <div class="lobbies-title-group">
           <h2>Salas Disponibles</h2>
@@ -59,7 +59,8 @@ import { AuthService } from '../services/auth.service';
           </div>
         </div>
         <div class="lobbies-controls">
-          <input class="search-input" type="text" placeholder="🔍 Buscar sala..." [(ngModel)]="searchQuery">
+          <label class="search-label" for="search-sala">🔍 Buscar sala</label>
+          <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
         </div>
       </div>
 
@@ -101,6 +102,11 @@ import { AuthService } from '../services/auth.service';
               <span class="player-count">{{ lobby.players }}/{{ lobby.maxPlayers }}</span>
             </div>
 
+            <!-- Compartir sala -->
+            <button class="btn-share" (click)="shareLobby(lobby, $event)" title="Compartir sala">
+              📋
+            </button>
+
             <!-- Entrar a tu propia sala -->
             <button *ngIf="lobby.isOwn" class="btn btn-enter-own" (click)="enterLobby(lobby.id)">
               ENTRAR →
@@ -135,8 +141,20 @@ import { AuthService } from '../services/auth.service';
       </div>
     </section>
 
+    <!-- ═══════════════ NO SESSION ALERT ═══════════════ -->
+    <div class="no-session-toast" *ngIf="showNoSessionAlert()">
+      <span class="toast-icon">🔒</span>
+      <span>Debes <a routerLink="/login" class="toast-link">iniciar sesión</a> para unirte o crear una sala.</span>
+      <button class="toast-close" (click)="showNoSessionAlert.set(false)">✕</button>
+    </div>
+
+    <!-- Copied toast -->
+    <div class="copied-toast" *ngIf="showCopiedToast()">
+      <span>✅ Enlace de sala copiado al portapapeles</span>
+    </div>
+
     <!-- ═══════════════ NEWS ═══════════════ -->
-    <section class="news-section animate-fade-in" style="animation-delay: 0.5s;">
+    <section class="news-section animate-fade-in" style="animation-delay: 0.5s; margin: 24px 0;">
       <h2>Inteligencia de Combate</h2>
       <div class="news-grid">
         <div class="news-card glass-panel hover-scale">
@@ -338,6 +356,8 @@ import { AuthService } from '../services/auth.service';
     .live-indicator { display: flex; align-items: center; gap: 8px; color: var(--accent-success); font-size: 0.9rem; font-weight: 600; }
     .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-success); animation: pulseLive 1.5s ease-in-out infinite; }
     @keyframes pulseLive { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+    .lobbies-controls { display: flex; flex-direction: column; gap: 4px; }
+    .search-label { font-size: 0.78rem; font-weight: 700; color: var(--accent-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
     .search-input { background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); color: white; padding: 10px 16px; border-radius: 8px; outline: none; font-family: var(--font-body); font-size: 0.9rem; width: 220px; transition: all var(--transition-fast); }
     .search-input:focus { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(6,182,212,0.2); }
     .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -370,10 +390,24 @@ import { AuthService } from '../services/auth.service';
     .empty-icon { font-size: 2.5rem; }
 
     /* Modals */
-    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 100vh; }
     @keyframes slideInModal { from{opacity:0;transform:translateY(-30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
     .animate-modal { animation: slideInModal 0.28s cubic-bezier(0.34,1.44,0.64,1) forwards; }
-    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; }
+    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; margin: auto; }
+
+    /* Share button */
+    .btn-share { background: rgba(255,255,255,0.06); border: 1px solid var(--border-light); color: var(--text-muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: all var(--transition-fast); flex-shrink: 0; }
+    .btn-share:hover { background: rgba(6,182,212,0.15); border-color: var(--accent-secondary); color: var(--accent-secondary); transform: translateY(-1px); }
+
+    /* No session toast */
+    .no-session-toast { display: flex; align-items: center; gap: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); padding: 14px 20px; border-radius: 12px; font-size: 0.92rem; color: var(--text-main); animation: fadeIn 0.3s ease forwards; }
+    .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .toast-link { color: var(--accent-secondary); font-weight: 700; text-decoration: underline; }
+    .toast-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0 4px; margin-left: auto; }
+    .toast-close:hover { color: white; }
+
+    /* Copied toast */
+    .copied-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: var(--accent-success); padding: 12px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; z-index: 9999; animation: fadeIn 0.3s ease forwards; }
     .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
     .modal-title-group { display: flex; align-items: center; gap: 14px; }
     .modal-icon { font-size: 2rem; line-height: 1; }
@@ -426,13 +460,15 @@ import { AuthService } from '../services/auth.service';
 })
 export class Home {
   readonly lobbyService = inject(LobbyService);
-  private  auth         = inject(AuthService);
+  readonly auth         = inject(AuthService);
   private  router       = inject(Router);
 
   searchQuery = '';
   showModal             = signal(false);
   showPasswordModal     = signal(false);
   showExistingLobbyModal = signal(false);
+  showNoSessionAlert    = signal(false);
+  showCopiedToast       = signal(false);
   existingLobby         = signal<import('../services/lobby.service').LobbyEntry | null>(null);
   passwordInput         = '';
   passwordError         = signal('');
@@ -457,6 +493,12 @@ export class Home {
 
   // ── Modal: Crear ────────────────────────────────────────────────
   openModal() {
+    // Require session to create a lobby
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+
     const user = this.auth.currentUser();
     const username = user?.username;
 
@@ -522,6 +564,12 @@ export class Home {
 
   // ── Join logic ──────────────────────────────────────────────────
   joinLobby(lobby: { id: number; hasPassword: boolean; password?: string }) {
+    // Require session to join
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+
     if (lobby.hasPassword) {
       this.pendingLobbyId = lobby.id;
       this.passwordInput = '';
@@ -552,7 +600,22 @@ export class Home {
   }
 
   enterLobby(id: number) {
+    // Require session to enter
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
     this.router.navigate(['/lobby', id]);
+  }
+
+  /** Share lobby link to clipboard */
+  shareLobby(lobby: any, event: Event) {
+    event.stopPropagation();
+    const url = `${window.location.origin}/lobby/${lobby.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showCopiedToast.set(true);
+      setTimeout(() => this.showCopiedToast.set(false), 2500);
+    });
   }
 
   /** Checks if the current user is already in the player list of a lobby */
