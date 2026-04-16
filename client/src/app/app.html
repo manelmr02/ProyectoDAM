@@ -10,14 +10,46 @@
 
     <div class="nav-links">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
-      <a routerLink="/lobby" routerLinkActive="active" class="nav-item">Lobby (Todos vs Todos)</a>
+
+      <!-- Lobby link: points to user's own lobby if they have one, otherwise just "/" -->
+      <ng-container *ngIf="myLobbyRoute()">
+        <a
+          [routerLink]="myLobbyRoute()"
+          routerLinkActive="active"
+          class="nav-item nav-lobby-active">
+          Mi Sala
+          <span class="nav-lobby-dot"></span>
+        </a>
+      </ng-container>
+      <ng-container *ngIf="!myLobbyRoute()">
+        <a routerLink="/" class="nav-item nav-item-disabled" title="Crea una partida para acceder a tu sala">
+          Lobby
+        </a>
+      </ng-container>
+
       <a routerLink="/ranking" routerLinkActive="active" class="nav-item">Clasificación</a>
     </div>
 
-    <div class="user-profile" style="cursor: pointer;" routerLink="/login">
-      <div class="level-badge">#</div>
-      <div class="avatar-placeholder"></div>
-      <span class="username">Iniciar Sesión</span>
+    <!-- ── NOT LOGGED IN ── -->
+    <div class="nav-auth-group" *ngIf="!auth.isLoggedIn()">
+      <a routerLink="/login" class="btn btn-secondary btn-sm-nav">Iniciar Sesión</a>
+      <a routerLink="/register" class="btn btn-primary btn-sm-nav">Registrarse</a>
+    </div>
+
+    <!-- ── LOGGED IN ── -->
+    <div class="user-profile" *ngIf="auth.isLoggedIn()">
+      <a routerLink="/profile" class="user-profile-link">
+        <div class="level-badge">{{ auth.currentUser()?.level }}</div>
+        <div class="avatar-nav"
+          [style.background]="'linear-gradient(135deg, ' + (auth.currentUser()?.avatarColor || '#8b5cf6') + ', #1e1b4b)'">
+          <span class="avatar-nav-initial">{{ auth.currentUser()?.username?.[0]?.toUpperCase() }}</span>
+        </div>
+        <div class="user-info">
+          <span class="username">{{ auth.currentUser()?.username }}</span>
+          <span class="user-clan" *ngIf="auth.currentUser()?.clan">{{ auth.currentUser()?.clan }}</span>
+        </div>
+      </a>
+      <button class="btn-logout" (click)="auth.logout()" title="Cerrar sesión">⏻</button>
     </div>
   </nav>
 
