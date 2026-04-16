@@ -4,12 +4,15 @@ import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Lobby } from './pages/lobby';
 import { Ranking } from './pages/ranking';
+import { Profile } from './pages/profile';
 
 export const routes: Routes = [
-  { path: '', component: Home },
-  { path: 'login', component: Login },
-  { path: 'register', component: Register },
-  { path: 'lobby', component: Lobby },
-  { path: 'ranking', component: Ranking },
-  { path: '**', redirectTo: '' }
+  { path: '',              component: Home },
+  { path: 'login',         component: Login },
+  { path: 'register',      component: Register },
+  { path: 'lobby/:id',     component: Lobby },
+  { path: 'lobby',         component: Lobby },
+  { path: 'ranking',       component: Ranking },
+  { path: 'profile',       component: Profile },
+  { path: '**',            redirectTo: '' }
 ];
