@@ -1,11 +1,22 @@
 .app-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
   gap: 32px;
   min-height: 100vh;
+}
+
+/* Section spacing */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.main-content > section {
+  margin: 0 16px;
 }
 
 /* Navbar */

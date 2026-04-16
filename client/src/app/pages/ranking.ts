@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
     <div class="ranking-container animate-fade-in">
       <div class="glass-panel text-center">
         <h2>Clasificación Global</h2>
-        <p class="text-muted">Los mejores estrategas de Faction Wars</p>
+        <p class="text-muted">Los mejores estrategas de Payload</p>
       </div>
 
       <div class="ranking-board glass-panel">

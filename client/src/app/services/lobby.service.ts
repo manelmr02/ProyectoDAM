@@ -81,6 +81,11 @@ const NPC_CHATS: { sender: string; text: string }[] = [
 @Injectable({ providedIn: 'root' })
 export class LobbyService {
   private auth = inject(AuthService);
+  private readonly onStorageChange = (event: StorageEvent) => {
+    if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
+    this.syncFromStorage();
+  };
+  private readonly onWindowFocus = () => this.syncFromStorage();
 
   /** All lobbies — reactive signal */
   readonly lobbies = signal<LobbyEntry[]>(this.load());
@@ -88,6 +93,12 @@ export class LobbyService {
   readonly activeCount = computed(
     () => this.lobbies().filter(l => l.status === 'Esperando').length
   );
+
+  constructor() {
+    window.addEventListener('storage', this.onStorageChange);
+    window.addEventListener('focus', this.onWindowFocus);
+    document.addEventListener('visibilitychange', this.onWindowFocus);
+  }
 
   // ── Persistence ─────────────────────────────────────────────────────────────
 
@@ -115,6 +126,14 @@ export class LobbyService {
   private save(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.lobbies()));
     localStorage.setItem(STORAGE_VER, CURRENT_VER.toString());
+  }
+
+  private syncFromStorage(): void {
+    const latest = this.load();
+    const current = this.lobbies();
+    if (JSON.stringify(latest) !== JSON.stringify(current)) {
+      this.lobbies.set(latest);
+    }
   }
 
   // ── Seed (initial demo data) ─────────────────────────────────────────────────
@@ -217,7 +236,14 @@ export class LobbyService {
 
   createLobby(dto: CreateLobbyDto): LobbyEntry {
     const user = this.auth.currentUser();
-    const host = user?.username ?? 'Estratega Maestro';
+    if (!user) {
+      throw new Error('No has iniciado sesión.');
+    }
+    const host = user.username;
+
+    // Prevent creating multiple rooms: remove all previous owned rooms
+    this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
+
     const authorColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
     const lobby: LobbyEntry = {
@@ -250,14 +276,16 @@ export class LobbyService {
   /** Add the current user to an existing lobby (or find the first open one) */
   joinLobby(id: number): LobbyEntry | null {
     const user = this.auth.currentUser();
-    const username = user?.username ?? 'Invitado';
-    const clan     = user?.clan   ?? '';
+    if (!user) return null; // Block unauthenticated users
+    const username = user.username;
+    const clan     = user.clan ?? '';
 
-    let target = this.getLobbyById(id);
-    if (!target || target.status === 'En curso' || target.players >= target.maxPlayers) return null;
+    const target = this.getLobbyById(id);
+    if (!target || target.status === 'En curso') return null;
 
     // Don't double-add
     const alreadyIn = target.playerList.some(p => p.name === username);
+    if (!alreadyIn && target.players >= target.maxPlayers) return null;
     if (!alreadyIn) {
       const updated: LobbyEntry = {
         ...target,

@@ -13,7 +13,7 @@ import { AuthService } from '../services/auth.service';
   <main class="main-content">
 
     <!-- ═══════════════ HERO ═══════════════ -->
-    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
+    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s; margin-bottom: 8px;">
       <div class="hero-content">
         <span class="badge">Fase de Preparación Activa</span>
         <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
@@ -49,7 +49,7 @@ import { AuthService } from '../services/auth.service';
     </section>
 
     <!-- ═══════════════ LOBBIES ═══════════════ -->
-    <section class="lobbies-section animate-fade-in" style="animation-delay: 0.4s;">
+    <section class="lobbies-section animate-fade-in" style="animation-delay: 0.4s; margin: 24px 0;">
       <div class="lobbies-header">
         <div class="lobbies-title-group">
           <h2>Salas Disponibles</h2>
@@ -59,7 +59,13 @@ import { AuthService } from '../services/auth.service';
           </div>
         </div>
         <div class="lobbies-controls">
-          <input class="search-input" type="text" placeholder="🔍 Buscar sala..." [(ngModel)]="searchQuery">
+<<<<<<< HEAD
+          <label class="search-label" for="search-lobby">Buscar sala</label>
+          <input id="search-lobby" class="search-input" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+=======
+          <label class="search-label" for="search-sala">🔍 Buscar sala</label>
+          <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
         </div>
       </div>
 
@@ -101,6 +107,18 @@ import { AuthService } from '../services/auth.service';
               <span class="player-count">{{ lobby.players }}/{{ lobby.maxPlayers }}</span>
             </div>
 
+<<<<<<< HEAD
+            <button
+              class="btn btn-share-inline"
+              title="Copiar enlace de la sala"
+              (click)="shareLobbyLink(lobby.id)">
+=======
+            <!-- Compartir sala -->
+            <button class="btn-share" (click)="shareLobby(lobby, $event)" title="Compartir sala">
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
+              📋
+            </button>
+
             <!-- Entrar a tu propia sala -->
             <button *ngIf="lobby.isOwn" class="btn btn-enter-own" (click)="enterLobby(lobby.id)">
               ENTRAR →
@@ -135,8 +153,20 @@ import { AuthService } from '../services/auth.service';
       </div>
     </section>
 
+    <!-- ═══════════════ NO SESSION ALERT ═══════════════ -->
+    <div class="no-session-toast" *ngIf="showNoSessionAlert()">
+      <span class="toast-icon">🔒</span>
+      <span>Debes <a routerLink="/login" class="toast-link">iniciar sesión</a> para unirte o crear una sala.</span>
+      <button class="toast-close" (click)="showNoSessionAlert.set(false)">✕</button>
+    </div>
+
+    <!-- Copied toast -->
+    <div class="copied-toast" *ngIf="showCopiedToast()">
+      <span>✅ Enlace de sala copiado al portapapeles</span>
+    </div>
+
     <!-- ═══════════════ NEWS ═══════════════ -->
-    <section class="news-section animate-fade-in" style="animation-delay: 0.5s;">
+    <section class="news-section animate-fade-in" style="animation-delay: 0.5s; margin: 24px 0;">
       <h2>Inteligencia de Combate</h2>
       <div class="news-grid">
         <div class="news-card glass-panel hover-scale">
@@ -166,6 +196,33 @@ import { AuthService } from '../services/auth.service';
       </div>
     </section>
   </main>
+
+  <!-- ═══════════════ MODAL: SESIÓN REQUERIDA ═══════════════ -->
+  <div class="modal-overlay" *ngIf="showLoginRequired()" (click)="closeOnBackdrop($event, 'login')">
+    <div class="modal-panel glass-panel animate-modal" style="max-width:440px">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🔒</span>
+          <div>
+            <h2 class="modal-title">Sesión requerida</h2>
+            <p class="modal-subtitle">Necesitas iniciar sesión para acceder a esta función</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="showLoginRequired.set(false); unlockBody()">✕</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5;">
+        Para crear partidas, unirte a salas o enviar mensajes debes tener una cuenta activa.
+      </p>
+      <div class="modal-actions" style="justify-content: stretch; flex-direction: column; gap: 10px;">
+        <a routerLink="/login" class="btn btn-primary modal-submit-btn" style="width:100%;justify-content:center; text-decoration:none;" (click)="showLoginRequired.set(false); unlockBody()">
+          INICIAR SESIÓN
+        </a>
+        <a routerLink="/register" class="btn btn-secondary" style="width:100%;justify-content:center; text-decoration:none;" (click)="showLoginRequired.set(false); unlockBody()">
+          CREAR CUENTA
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══════════════ MODAL: YA TIENES SALA ═══════════════ -->
   <div class="modal-overlay" *ngIf="showExistingLobbyModal()" (click)="closeOnBackdrop($event, 'existing')">
@@ -332,12 +389,19 @@ import { AuthService } from '../services/auth.service';
 
     /* Lobbies */
     .lobbies-section { display: flex; flex-direction: column; gap: 20px; }
-    .lobbies-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .lobbies-header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .lobbies-title-group { display: flex; align-items: center; gap: 20px; padding-left: 16px; border-left: 4px solid var(--accent-secondary); }
     .lobbies-title-group h2 { font-size: 2rem; color: var(--text-main); }
     .live-indicator { display: flex; align-items: center; gap: 8px; color: var(--accent-success); font-size: 0.9rem; font-weight: 600; }
     .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-success); animation: pulseLive 1.5s ease-in-out infinite; }
     @keyframes pulseLive { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+<<<<<<< HEAD
+    .lobbies-controls { display: flex; flex-direction: column; gap: 6px; }
+    .search-label { font-family: var(--font-heading); font-size: 0.78rem; color: var(--accent-secondary); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
+=======
+    .lobbies-controls { display: flex; flex-direction: column; gap: 4px; }
+    .search-label { font-size: 0.78rem; font-weight: 700; color: var(--accent-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
     .search-input { background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); color: white; padding: 10px 16px; border-radius: 8px; outline: none; font-family: var(--font-body); font-size: 0.9rem; width: 220px; transition: all var(--transition-fast); }
     .search-input:focus { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(6,182,212,0.2); }
     .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -356,7 +420,7 @@ import { AuthService } from '../services/auth.service';
     .status-ingame  { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
     .lobby-meta { display: flex; gap: 16px; flex-wrap: wrap; }
     .meta-item { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-muted); }
-    .lobby-card-footer { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+    .lobby-card-footer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
     .player-bar-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
     .player-bar-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
     .player-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); transition: width 0.5s ease; }
@@ -366,14 +430,37 @@ import { AuthService } from '../services/auth.service';
     .btn-disabled { background: rgba(255,255,255,0.08) !important; color: var(--text-muted) !important; cursor: not-allowed; box-shadow: none !important; }
     .btn-enter-own { background: linear-gradient(135deg, #d97706, #fbbf24); color: #000; padding: 8px 18px; font-size: 0.85rem; font-family: var(--font-heading); font-weight: 800; border-radius: 8px; border: none; cursor: pointer; transition: all var(--transition-normal); white-space: nowrap; }
     .btn-enter-own:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(251,191,36,0.5); }
+    .btn-share-inline { width: 38px; height: 36px; border-radius: 8px; border: 1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.12); color: #34d399; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; transition: all var(--transition-fast); }
+    .btn-share-inline:hover { background: rgba(16,185,129,0.25); border-color: rgba(16,185,129,0.55); transform: translateY(-1px); }
     .empty-lobbies { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 48px 24px; color: var(--text-muted); background: var(--bg-panel); border: 1px dashed var(--border-light); border-radius: 16px; text-align: center; }
     .empty-icon { font-size: 2.5rem; }
 
     /* Modals */
-    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+<<<<<<< HEAD
+    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
     @keyframes slideInModal { from{opacity:0;transform:translateY(-30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
     .animate-modal { animation: slideInModal 0.28s cubic-bezier(0.34,1.44,0.64,1) forwards; }
-    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; }
+    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; margin: auto; }
+=======
+    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 100vh; }
+    @keyframes slideInModal { from{opacity:0;transform:translateY(-30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .animate-modal { animation: slideInModal 0.28s cubic-bezier(0.34,1.44,0.64,1) forwards; }
+    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; margin: auto; }
+
+    /* Share button */
+    .btn-share { background: rgba(255,255,255,0.06); border: 1px solid var(--border-light); color: var(--text-muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: all var(--transition-fast); flex-shrink: 0; }
+    .btn-share:hover { background: rgba(6,182,212,0.15); border-color: var(--accent-secondary); color: var(--accent-secondary); transform: translateY(-1px); }
+
+    /* No session toast */
+    .no-session-toast { display: flex; align-items: center; gap: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); padding: 14px 20px; border-radius: 12px; font-size: 0.92rem; color: var(--text-main); animation: fadeIn 0.3s ease forwards; }
+    .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .toast-link { color: var(--accent-secondary); font-weight: 700; text-decoration: underline; }
+    .toast-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0 4px; margin-left: auto; }
+    .toast-close:hover { color: white; }
+
+    /* Copied toast */
+    .copied-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: var(--accent-success); padding: 12px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; z-index: 9999; animation: fadeIn 0.3s ease forwards; }
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
     .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
     .modal-title-group { display: flex; align-items: center; gap: 14px; }
     .modal-icon { font-size: 2rem; line-height: 1; }
@@ -426,13 +513,16 @@ import { AuthService } from '../services/auth.service';
 })
 export class Home {
   readonly lobbyService = inject(LobbyService);
-  private  auth         = inject(AuthService);
+  readonly auth         = inject(AuthService);
   private  router       = inject(Router);
 
   searchQuery = '';
+  showLoginRequired     = signal(false);
   showModal             = signal(false);
   showPasswordModal     = signal(false);
   showExistingLobbyModal = signal(false);
+  showNoSessionAlert    = signal(false);
+  showCopiedToast       = signal(false);
   existingLobby         = signal<import('../services/lobby.service').LobbyEntry | null>(null);
   passwordInput         = '';
   passwordError         = signal('');
@@ -457,18 +547,27 @@ export class Home {
 
   // ── Modal: Crear ────────────────────────────────────────────────
   openModal() {
+    // Require session to create a lobby
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+
     const user = this.auth.currentUser();
-    const username = user?.username;
+    if (!user) {
+      this.showLoginRequired.set(true);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+    const username = user.username;
 
     // Check if the user already owns a lobby
-    if (username) {
-      const owned = this.lobbyService.getUserLobby(username);
-      if (owned) {
-        this.existingLobby.set(owned);
-        this.showExistingLobbyModal.set(true);
-        document.body.style.overflow = 'hidden';
-        return;
-      }
+    const owned = this.lobbyService.getUserLobby(username);
+    if (owned) {
+      this.existingLobby.set(owned);
+      this.showExistingLobbyModal.set(true);
+      document.body.style.overflow = 'hidden';
+      return;
     }
 
     this.draft = this.emptyDraft();
@@ -506,22 +605,45 @@ export class Home {
     document.body.style.overflow = '';
   }
 
-  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing') {
+  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing' | 'login') {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) {
       if (which === 'create') this.closeModal();
       else if (which === 'pass') { this.showPasswordModal.set(false); this.unlockBody(); }
+      else if (which === 'login') { this.showLoginRequired.set(false); this.unlockBody(); }
       else { this.showExistingLobbyModal.set(false); this.unlockBody(); }
     }
   }
 
   confirmCreate() {
-    const lobby = this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+    let lobby: import('../services/lobby.service').LobbyEntry;
+    try {
+      lobby = this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+    } catch {
+      this.showModal.set(false);
+      this.showLoginRequired.set(true);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
     this.closeModal();
     this.router.navigate(['/lobby', lobby.id]);
   }
 
   // ── Join logic ──────────────────────────────────────────────────
   joinLobby(lobby: { id: number; hasPassword: boolean; password?: string }) {
+<<<<<<< HEAD
+    if (!this.auth.currentUser()) {
+      this.showLoginRequired.set(true);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+=======
+    // Require session to join
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
     if (lobby.hasPassword) {
       this.pendingLobbyId = lobby.id;
       this.passwordInput = '';
@@ -547,12 +669,41 @@ export class Home {
   }
 
   private doJoin(id: number) {
-    this.lobbyService.joinLobby(id);
+    const joined = this.lobbyService.joinLobby(id);
+    if (!joined) return;
     this.router.navigate(['/lobby', id]);
   }
 
+  shareLobbyLink(id: number) {
+    const url = `${window.location.origin}/lobby/${id}`;
+    navigator.clipboard.writeText(url).catch(() => {
+      window.prompt('Copia este enlace:', url);
+    });
+  }
+
   enterLobby(id: number) {
+<<<<<<< HEAD
+    if (!this.auth.currentUser()) {
+      this.showLoginRequired.set(true);
+      document.body.style.overflow = 'hidden';
+=======
+    // Require session to enter
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+>>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
+      return;
+    }
     this.router.navigate(['/lobby', id]);
+  }
+
+  /** Share lobby link to clipboard */
+  shareLobby(lobby: any, event: Event) {
+    event.stopPropagation();
+    const url = `${window.location.origin}/lobby/${lobby.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showCopiedToast.set(true);
+      setTimeout(() => this.showCopiedToast.set(false), 2500);
+    });
   }
 
   /** Checks if the current user is already in the player list of a lobby */
