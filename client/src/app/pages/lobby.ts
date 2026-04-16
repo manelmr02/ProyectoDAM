@@ -2,9 +2,8 @@ import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
-import { LobbyService, LobbyEntry, LobbyPlayer } from '../services/lobby.service';
+import { LobbyService, LobbyEntry } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
-import { DOCUMENT } from '@angular/common';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
@@ -193,8 +192,8 @@ const PHRASES: { sender: string; text: string }[] = [
     .lobby-sub-info { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
     .sep { opacity: 0.4; }
     .text-success { color: var(--accent-success); font-weight: 700; }
-    .lobby-action { flex-shrink: 0; display: flex; align-items: center; gap: 16px; }
-    
+    .lobby-action { flex-shrink: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
     .btn-danger-link {
       background: transparent;
       border: 1px solid rgba(239, 68, 68, 0.3);
@@ -353,7 +352,7 @@ const PHRASES: { sender: string; text: string }[] = [
 export class Lobby implements OnInit, OnDestroy {
   private route         = inject(ActivatedRoute);
   private lobbyService  = inject(LobbyService);
-  readonly auth          = inject(AuthService);
+  readonly auth         = inject(AuthService);
 
   lobby   = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
@@ -488,7 +487,7 @@ export class Lobby implements OnInit, OnDestroy {
   }
 
   sendMessage() {
-    if (!this.auth.currentUser()) return;
+    if (!this.auth.isLoggedIn()) return;
     const text = this.chatInput.trim();
     if (!text) return;
     this.addMsg(this.myName(), text);
