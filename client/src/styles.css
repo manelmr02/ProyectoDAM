@@ -176,3 +176,83 @@ h6 {
 .news-section {
   margin-top: 10px;
 }
+
+@media (max-width: 768px) {
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+/* ═══════════════ GLOBAL MODAL SYSTEM ═══════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(4, 6, 12, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeInOverlay 0.3s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 540px;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.1);
+  padding: 32px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform-origin: center;
+}
+
+.animate-modal {
+  animation: modalEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Scrollbar for modal panel */
+.modal-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.modal-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

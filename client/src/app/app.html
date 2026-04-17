@@ -13,10 +13,7 @@
 
       <!-- Lobby link: points to user's own lobby if they have one, otherwise just "/" -->
       <ng-container *ngIf="myLobbyRoute()">
-        <a
-          [routerLink]="myLobbyRoute()"
-          routerLinkActive="active"
-          class="nav-item nav-lobby-active">
+        <a [routerLink]="myLobbyRoute()" routerLinkActive="active" class="nav-item nav-lobby-active">
           Mi Sala
           <span class="nav-lobby-dot"></span>
         </a>
@@ -62,7 +59,7 @@
       <a href="#">Términos y Condiciones</a>
       <a href="#">Política de Privacidad</a>
       <a href="#">Reglas de Combate</a>
-      <a href="#">Soporte Táctico</a>
+      <a href="#">Soporte Técnico</a>
     </div>
     <div class="footer-divider"></div>
     <p class="footer-copy">&copy; 2026 Payload Strategic Strike. Proyecto DAM.</p>
