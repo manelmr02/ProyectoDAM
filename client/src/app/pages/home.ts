@@ -513,19 +513,19 @@ import { AuthService } from '../services/auth.service';
 })
 export class Home {
   readonly lobbyService = inject(LobbyService);
-  readonly auth         = inject(AuthService);
-  private  router       = inject(Router);
+  readonly auth = inject(AuthService);
+  private router = inject(Router);
 
   searchQuery = '';
-  showLoginRequired     = signal(false);
-  showModal             = signal(false);
-  showPasswordModal     = signal(false);
+  showLoginRequired = signal(false);
+  showModal = signal(false);
+  showPasswordModal = signal(false);
   showExistingLobbyModal = signal(false);
-  showNoSessionAlert    = signal(false);
-  showCopiedToast       = signal(false);
-  existingLobby         = signal<import('../services/lobby.service').LobbyEntry | null>(null);
-  passwordInput         = '';
-  passwordError         = signal('');
+  showNoSessionAlert = signal(false);
+  showCopiedToast = signal(false);
+  existingLobby = signal<import('../services/lobby.service').LobbyEntry | null>(null);
+  passwordInput = '';
+  passwordError = signal('');
 
   /** Lobby the user is trying to join (needs password check) */
   private pendingLobbyId: number | null = null;
@@ -630,20 +630,11 @@ export class Home {
 
   // ── Join logic ──────────────────────────────────────────────────
   joinLobby(lobby: { id: number; hasPassword: boolean; password?: string }) {
-<<<<<<< HEAD
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';
       return;
     }
-=======
-    // Require session to join
-    if (!this.auth.isLoggedIn()) {
-      this.showNoSessionAlert.set(true);
-      return;
-    }
-
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
     if (lobby.hasPassword) {
       this.pendingLobbyId = lobby.id;
       this.passwordInput = '';
@@ -682,15 +673,9 @@ export class Home {
   }
 
   enterLobby(id: number) {
-<<<<<<< HEAD
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';
-=======
-    // Require session to enter
-    if (!this.auth.isLoggedIn()) {
-      this.showNoSessionAlert.set(true);
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
       return;
     }
     this.router.navigate(['/lobby', id]);
