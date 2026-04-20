@@ -178,7 +178,6 @@ h6 {
 }
 
 @media (max-width: 768px) {
-
   html,
   body {
     margin: 0;
@@ -190,6 +189,11 @@ h6 {
   *::before,
   *::after {
     box-sizing: border-box;
+  }
+
+  .modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 24px !important;
   }
 }
 

@@ -16,6 +16,18 @@ export class App {
   readonly auth         = inject(AuthService);
   readonly lobbyService = inject(LobbyService);
 
+  isMobileMenuOpen = signal(false);
+
+  toggleMobileMenu() {
+    this.isMobileMenuOpen.update(v => !v);
+  }
+
+  closeMobileMenu() {
+    if (this.isMobileMenuOpen()) {
+      this.isMobileMenuOpen.set(false);
+    }
+  }
+
   /**
    * The route to the user's own lobby.
    * Returns ['/lobby', id] if the user has a created lobby, null otherwise.

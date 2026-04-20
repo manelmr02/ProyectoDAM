@@ -9,16 +9,16 @@ interface ChatMessage { sender?: string; text: string; time: string; system?: bo
 
 // NPC phrases for random chat simulation
 const PHRASES: { sender: string; text: string }[] = [
-  { sender: 'ComandanteRex',  text: 'Prepárense para caer.' },
-  { sender: 'NightStalker',   text: 'Esta vez no habrá piedad.' },
-  { sender: 'IronFalcon',     text: '¿Alguien tiene estrategia?' },
-  { sender: 'GhostReaper',    text: 'El mejor gana, siempre.' },
-  { sender: 'ThunderBolt',    text: 'Vamos a por todas!' },
-  { sender: 'DarkPhoenix',    text: 'Primera vez, pero no seré el último.' },
-  { sender: 'CrimsonBlade',   text: 'La defensa gana campeonatos.' },
-  { sender: 'ShadowMind',     text: '...' },
-  { sender: 'NovaCaptain',    text: 'Atacamos o esperamos?' },
-  { sender: 'FrostWarden',    text: 'Silencio antes de la tormenta.' },
+  { sender: 'ComandanteRex', text: 'Prepárense para caer.' },
+  { sender: 'NightStalker', text: 'Esta vez no habrá piedad.' },
+  { sender: 'IronFalcon', text: '¿Alguien tiene estrategia?' },
+  { sender: 'GhostReaper', text: 'El mejor gana, siempre.' },
+  { sender: 'ThunderBolt', text: 'Vamos a por todas!' },
+  { sender: 'DarkPhoenix', text: 'Primera vez, pero no seré el último.' },
+  { sender: 'CrimsonBlade', text: 'La defensa gana campeonatos.' },
+  { sender: 'ShadowMind', text: '...' },
+  { sender: 'NovaCaptain', text: 'Atacamos o esperamos?' },
+  { sender: 'FrostWarden', text: 'Silencio antes de la tormenta.' },
 ];
 
 @Component({
@@ -345,16 +345,23 @@ const PHRASES: { sender: string; text: string }[] = [
 
     @media (max-width: 768px) {
       .lobby-grid { grid-template-columns: 1fr; }
-      .lobby-header { flex-direction: column; }
+      .lobby-header { flex-direction: column; align-items: stretch; gap: 16px; }
+      .lobby-action { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 12px; 
+      }
+      .lobby-action .btn { width: 100%; justify-content: center; }
+      .lobby-action .btn-danger-link { grid-column: span 2; }
     }
   `]
 })
 export class Lobby implements OnInit, OnDestroy {
-  private route         = inject(ActivatedRoute);
-  private lobbyService  = inject(LobbyService);
-  readonly auth         = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private lobbyService = inject(LobbyService);
+  readonly auth = inject(AuthService);
 
-  lobby   = signal<LobbyEntry | null>(null);
+  lobby = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
   isReady = signal(false);
   showDeleteModal = signal(false);
@@ -365,7 +372,7 @@ export class Lobby implements OnInit, OnDestroy {
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
-  
+
   isHost = computed(() => {
     const l = this.lobby();
     return l ? l.host === this.myName() : false;
@@ -474,7 +481,7 @@ export class Lobby implements OnInit, OnDestroy {
   confirmDelete() {
     const l = this.lobby();
     if (!l) return;
-    
+
     this.lobbyService.deleteLobby(l.id);
     this.showDeleteModal.set(false);
     this.router.navigate(['/']);
@@ -520,7 +527,7 @@ export class Lobby implements OnInit, OnDestroy {
 
   private now(): string {
     const d = new Date();
-    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   }
 
   private scrollChat() {

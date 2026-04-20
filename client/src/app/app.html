@@ -2,11 +2,19 @@
 
 <div class="app-container">
   <nav class="top-nav glass-panel animate-fade-in" style="animation-delay: 0.1s;">
-    <a routerLink="/" class="logo"
-      style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
-      <img src="logoMin.png" alt="Logo Payload" style="height: 32px; width: auto; object-fit: contain;">
-      <span class="logo-text">PAYLOAD <span class="highlight">STRATEGIC STRIKE</span></span>
-    </a>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <button class="mobile-menu-btn" (click)="toggleMobileMenu()" aria-label="Abrir menú">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+
+      <a routerLink="/" class="logo"
+        style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
+        <img src="logoMin.png" alt="Logo Payload" style="height: 32px; width: auto; object-fit: contain;">
+        <span class="logo-text">PAYLOAD <span class="highlight">STRATEGIC STRIKE</span></span>
+      </a>
+    </div>
 
     <div class="nav-links">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
@@ -49,6 +57,33 @@
       <button class="btn-logout" (click)="auth.logout()" title="Cerrar sesión">⏻</button>
     </div>
   </nav>
+
+  <!-- Mobile Nav Overlay -->
+  <div class="mobile-nav-overlay" *ngIf="isMobileMenuOpen()" (click)="closeMobileMenu()">
+    <div class="mobile-nav-content" (click)="$event.stopPropagation()">
+      <div class="mobile-nav-header">
+        <span class="logo-text">MENÚ NAVEGACIÓN</span>
+        <button class="close-menu-btn" (click)="closeMobileMenu()">✕</button>
+      </div>
+      <div class="mobile-nav-links">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="mobile-nav-item" (click)="closeMobileMenu()">Inicio</a>
+
+        <ng-container *ngIf="myLobbyRoute()">
+          <a [routerLink]="myLobbyRoute()" routerLinkActive="active" class="mobile-nav-item nav-lobby-active" (click)="closeMobileMenu()">
+            Mi Sala
+            <span class="nav-lobby-dot"></span>
+          </a>
+        </ng-container>
+        <ng-container *ngIf="!myLobbyRoute()">
+          <a routerLink="/" class="mobile-nav-item mobile-disabled" title="Crea o únete a una partida para acceder a la sala">
+            Lobby
+          </a>
+        </ng-container>
+
+        <a routerLink="/ranking" routerLinkActive="active" class="mobile-nav-item" (click)="closeMobileMenu()">Clasificación</a>
+      </div>
+    </div>
+  </div>
 
   <div class="router-wrapper">
     <router-outlet></router-outlet>

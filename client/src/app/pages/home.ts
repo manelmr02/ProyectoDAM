@@ -13,7 +13,7 @@ import { AuthService } from '../services/auth.service';
   <main class="main-content">
 
     <!-- ═══════════════ HERO ═══════════════ -->
-    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s; margin-bottom: 8px;">
+    <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
       <div class="hero-content">
         <span class="badge">Fase de Preparación Activa</span>
         <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
@@ -59,13 +59,8 @@ import { AuthService } from '../services/auth.service';
           </div>
         </div>
         <div class="lobbies-controls">
-<<<<<<< HEAD
-          <label class="search-label" for="search-lobby">Buscar sala</label>
-          <input id="search-lobby" class="search-input" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
-=======
           <label class="search-label" for="search-sala">🔍 Buscar sala</label>
           <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
         </div>
       </div>
 
@@ -107,15 +102,8 @@ import { AuthService } from '../services/auth.service';
               <span class="player-count">{{ lobby.players }}/{{ lobby.maxPlayers }}</span>
             </div>
 
-<<<<<<< HEAD
-            <button
-              class="btn btn-share-inline"
-              title="Copiar enlace de la sala"
-              (click)="shareLobbyLink(lobby.id)">
-=======
             <!-- Compartir sala -->
             <button class="btn-share" (click)="shareLobby(lobby, $event)" title="Compartir sala">
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
               📋
             </button>
 
@@ -395,13 +383,8 @@ import { AuthService } from '../services/auth.service';
     .live-indicator { display: flex; align-items: center; gap: 8px; color: var(--accent-success); font-size: 0.9rem; font-weight: 600; }
     .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-success); animation: pulseLive 1.5s ease-in-out infinite; }
     @keyframes pulseLive { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
-<<<<<<< HEAD
     .lobbies-controls { display: flex; flex-direction: column; gap: 6px; }
     .search-label { font-family: var(--font-heading); font-size: 0.78rem; color: var(--accent-secondary); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
-=======
-    .lobbies-controls { display: flex; flex-direction: column; gap: 4px; }
-    .search-label { font-size: 0.78rem; font-weight: 700; color: var(--accent-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
     .search-input { background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); color: white; padding: 10px 16px; border-radius: 8px; outline: none; font-family: var(--font-body); font-size: 0.9rem; width: 220px; transition: all var(--transition-fast); }
     .search-input:focus { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(6,182,212,0.2); }
     .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -435,32 +418,7 @@ import { AuthService } from '../services/auth.service';
     .empty-lobbies { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 48px 24px; color: var(--text-muted); background: var(--bg-panel); border: 1px dashed var(--border-light); border-radius: 16px; text-align: center; }
     .empty-icon { font-size: 2.5rem; }
 
-    /* Modals */
-<<<<<<< HEAD
-    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-    @keyframes slideInModal { from{opacity:0;transform:translateY(-30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
-    .animate-modal { animation: slideInModal 0.28s cubic-bezier(0.34,1.44,0.64,1) forwards; }
-    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; margin: auto; }
-=======
-    .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 100vh; }
-    @keyframes slideInModal { from{opacity:0;transform:translateY(-30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
-    .animate-modal { animation: slideInModal 0.28s cubic-bezier(0.34,1.44,0.64,1) forwards; }
-    .modal-panel { width: 100%; max-width: 540px; background: rgba(10,14,26,0.95); border-color: rgba(139,92,246,0.3); max-height: 90vh; overflow-y: auto; margin: auto; }
-
-    /* Share button */
-    .btn-share { background: rgba(255,255,255,0.06); border: 1px solid var(--border-light); color: var(--text-muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: all var(--transition-fast); flex-shrink: 0; }
-    .btn-share:hover { background: rgba(6,182,212,0.15); border-color: var(--accent-secondary); color: var(--accent-secondary); transform: translateY(-1px); }
-
-    /* No session toast */
-    .no-session-toast { display: flex; align-items: center; gap: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); padding: 14px 20px; border-radius: 12px; font-size: 0.92rem; color: var(--text-main); animation: fadeIn 0.3s ease forwards; }
-    .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .toast-link { color: var(--accent-secondary); font-weight: 700; text-decoration: underline; }
-    .toast-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0 4px; margin-left: auto; }
-    .toast-close:hover { color: white; }
-
-    /* Copied toast */
-    .copied-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: var(--accent-success); padding: 12px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; z-index: 9999; animation: fadeIn 0.3s ease forwards; }
->>>>>>> 5bd7a178dba3d5ccd4d22b532c28d5fea20ea22a
+    /* Modal Content Styles (Specific to Home) */
     .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
     .modal-title-group { display: flex; align-items: center; gap: 14px; }
     .modal-icon { font-size: 2rem; line-height: 1; }

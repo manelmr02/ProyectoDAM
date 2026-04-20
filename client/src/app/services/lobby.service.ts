@@ -308,7 +308,7 @@ export class LobbyService {
     return target;
   }
 
-  /** Removes the current user from the lobby (unless they are the host) */
+  /** Removes the current user from the lobby (or deletes it if host) */
   leaveLobby(id: number): void {
     const user = this.auth.currentUser();
     const username = user?.username;
@@ -317,8 +317,11 @@ export class LobbyService {
     const target = this.getLobbyById(id);
     if (!target) return;
 
-    // A host doesn't "leave" their own room by navigating away
-    if (target.host === username) return;
+    // If the host leaves, the room is deleted
+    if (target.host === username) {
+      this.deleteLobby(id);
+      return;
+    }
 
     const isMember = target.playerList.some(p => p.name === username);
     if (isMember) {
