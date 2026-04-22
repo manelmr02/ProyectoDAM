@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { AuthService } from './auth.service';
+import { ProfanityService } from './profanity.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,8 @@ export interface LobbyEntry {
   createdAt: string;
   /** Full player list for when you're inside the lobby */
   playerList: LobbyPlayer[];
+  /** Timestamp when the countdown started (all ready) */
+  startReadyTime?: number | null;
 }
 
 export interface CreateLobbyDto {
@@ -83,6 +86,7 @@ const NPC_CHATS: { sender: string; text: string }[] = [
 @Injectable({ providedIn: 'root' })
 export class LobbyService {
   private auth = inject(AuthService);
+  private profanity = inject(ProfanityService);
   private readonly onStorageChange = (event: StorageEvent) => {
     if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
     this.syncFromStorage();
@@ -246,6 +250,10 @@ export class LobbyService {
     // Prevent creating multiple rooms: remove all previous owned rooms
     this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
 
+    if (this.profanity.hasProfanity(dto.name) || this.profanity.hasProfanity(dto.description)) {
+      throw new Error('El nombre o descripción de la sala contiene palabras no permitidas.');
+    }
+
     const authorColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
     const lobby: LobbyEntry = {
@@ -345,11 +353,17 @@ export class LobbyService {
     this.lobbies.update(list =>
       list.map(l => {
         if (l.id !== lobbyId) return l;
+        const updatedPlayers = l.playerList.map(p =>
+          p.name === playerName ? { ...p, status } : p
+        );
+
+        // Check if ALL are ready now
+        const allReady = updatedPlayers.length >= 2 && updatedPlayers.every(p => p.status === 'Ready');
+        
         return {
           ...l,
-          playerList: l.playerList.map(p =>
-            p.name === playerName ? { ...p, status } : p
-          ),
+          playerList: updatedPlayers,
+          startReadyTime: allReady ? (l.startReadyTime || Date.now()) : null
         };
       })
     );

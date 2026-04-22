@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { LobbyService, LobbyEntry } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
+import { ProfanityService } from '../services/profanity.service';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
@@ -52,7 +53,7 @@ const PHRASES: { sender: string; text: string }[] = [
           <div class="lobby-back-row">
             <a routerLink="/" class="back-btn" title="Volver al inicio">← Salas</a>
             <span class="lobby-mode-pill">{{ lobby()!.mode }}</span>
-            <span class="lobby-lock" *ngIf="lobby()!.hasPassword" title="Sala privada">🔒</span>
+            <span class="lobby-lock" *ngIf="lobby()!.hasPassword" title="Sala con código">🔒</span>
           </div>
           <h2>{{ lobby()!.name }}</h2>
           <div class="lobby-sub-info">
@@ -69,8 +70,11 @@ const PHRASES: { sender: string; text: string }[] = [
           <button class="btn btn-share" (click)="shareLobby()" title="Compartir enlace de la sala">
             📋 COMPARTIR
           </button>
-          <button class="btn btn-danger-link" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
+          <button class="btn btn-danger" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
             🗑 BORRAR SALA
+          </button>
+          <button class="btn btn-danger" *ngIf="!isHost()" (click)="leaveLobby()">
+            🚪 SALIR
           </button>
           <button class="btn" [class.btn-primary]="!isReady()" [class.btn-secondary]="isReady()" (click)="toggleReady()">
             <span *ngIf="!isReady()">✔ ESTOY LISTO</span>
@@ -166,6 +170,16 @@ const PHRASES: { sender: string; text: string }[] = [
             <button type="submit" class="btn btn-primary btn-sm" [disabled]="!auth.isLoggedIn()">Enviar</button>
           </form>
         </div>
+      </div>
+    </div>
+
+    <!-- START COUNTDOWN OVERLAY -->
+    <div class="countdown-overlay animate-fade-in" *ngIf="isFullReady() && countdown() > 0">
+      <div class="countdown-card glass-panel animate-zoom">
+        <div class="war-icon">⚡</div>
+        <span class="countdown-msg">¡TODOS LISTOS!</span>
+        <h1 class="countdown-num">{{ countdown() }}</h1>
+        <p class="countdown-sub">Preparando despliegue estratégico...</p>
       </div>
     </div>
   `,
@@ -312,21 +326,9 @@ const PHRASES: { sender: string; text: string }[] = [
       background: rgba(0,0,0,0.15);
     }
 
-    /* Modal Styles (extracted for consistency) */
-    .modal-overlay {
-      position: fixed; inset: 0; z-index: 2000;
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-    }
-    .modal-panel {
-      width: 100%; max-width: 440px;
-      background: rgba(15, 20, 35, 0.95);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 24px; border-radius: 16px;
-    }
     @keyframes slideInModal {
       from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 1; transform: none; }
     }
     .animate-modal { animation: slideInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     .modal-header { display: flex; align-items: flex-start; margin-bottom: 20px; }
@@ -360,6 +362,7 @@ export class Lobby implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private lobbyService = inject(LobbyService);
   readonly auth = inject(AuthService);
+  private profanity = inject(ProfanityService);
 
   lobby = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
@@ -391,6 +394,25 @@ export class Lobby implements OnInit, OnDestroy {
     return Array(Math.max(0, free)).fill(null);
   });
 
+  readonly isFullReady = computed(() => {
+    const l = this.lobby();
+    if (!l || l.playerList.length < 2) return false;
+    return l.playerList.every(p => p.status === 'Ready');
+  });
+
+  countdown = signal(5);
+  private countdownInterval: any = null;
+
+  constructor() {
+    effect(() => {
+      if (this.isFullReady()) {
+        this.startCountdown();
+      } else {
+        this.stopCountdown();
+      }
+    });
+  }
+
   ngOnInit() {
     // Auth guard: block if not logged in
     if (!this.auth.currentUser()) {
@@ -417,6 +439,12 @@ export class Lobby implements OnInit, OnDestroy {
       }
     } else {
       this.lobby.set(found);
+    }
+
+    // Sync isReady state if already in lobby
+    const me = this.lobby()?.playerList.find(p => p.name === this.myName());
+    if (me) {
+      this.isReady.set(me.status === 'Ready');
     }
 
     const currentLobby = this.lobby()!;
@@ -459,9 +487,12 @@ export class Lobby implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.timers.forEach(t => clearTimeout(t));
-    const current = this.lobby();
-    if (current) {
-      this.lobbyService.leaveLobby(current.id);
+    this.stopCountdown();
+
+    // If the user navigates away while ready, cancel their ready state
+    // so the countdown stops for everyone.
+    if (this.isReady()) {
+      this.toggleReady();
     }
   }
 
@@ -476,6 +507,14 @@ export class Lobby implements OnInit, OnDestroy {
       ? `${this.myName()} está LISTO.`
       : `${this.myName()} canceló el estado listo.`
     );
+  }
+
+  leaveLobby() {
+    const l = this.lobby();
+    if (l) {
+      this.lobbyService.leaveLobby(l.id);
+      this.router.navigate(['/']);
+    }
   }
 
   confirmDelete() {
@@ -497,7 +536,9 @@ export class Lobby implements OnInit, OnDestroy {
     if (!this.auth.isLoggedIn()) return;
     const text = this.chatInput.trim();
     if (!text) return;
-    this.addMsg(this.myName(), text);
+
+    const filtered = this.profanity.filterText(text);
+    this.addMsg(this.myName(), filtered);
     this.chatInput = '';
     this.scrollChat();
   }
@@ -535,5 +576,35 @@ export class Lobby implements OnInit, OnDestroy {
       const box = document.getElementById('chatBox');
       if (box) box.scrollTop = box.scrollHeight;
     }, 50);
+  }
+
+  private startCountdown() {
+    if (this.countdownInterval) return;
+    
+    this.countdownInterval = setInterval(() => {
+      const startTime = this.lobby()?.startReadyTime;
+      if (!startTime) {
+        this.stopCountdown();
+        return;
+      }
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 5 - elapsed);
+      
+      this.countdown.set(remaining);
+
+      if (remaining <= 0) {
+        this.stopCountdown();
+        this.addSystem('¡LA GUERRA COMIENZA AHORA!');
+      }
+    }, 500); // Check more frequently for better sync
+  }
+
+  private stopCountdown() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    this.countdown.set(5);
   }
 }

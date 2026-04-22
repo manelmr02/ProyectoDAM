@@ -36,7 +36,7 @@
     </div>
 
     <!-- ── NOT LOGGED IN ── -->
-    <div class="nav-auth-group" *ngIf="!auth.isLoggedIn()">
+    <div class="nav-auth-group hide-mobile" *ngIf="!auth.isLoggedIn()">
       <a routerLink="/login" class="btn btn-secondary btn-sm-nav">Iniciar Sesión</a>
       <a routerLink="/register" class="btn btn-primary btn-sm-nav">Registrarse</a>
     </div>
@@ -44,17 +44,19 @@
     <!-- ── LOGGED IN ── -->
     <div class="user-profile" *ngIf="auth.isLoggedIn()">
       <a routerLink="/profile" class="user-profile-link">
-        <div class="level-badge">{{ auth.currentUser()?.level }}</div>
+        <div class="level-badge" title="Nivel de usuario">LV.{{ auth.currentUser()?.level }}</div>
         <div class="avatar-nav"
           [style.background]="auth.currentUser()?.avatarImage ? 'url(' + auth.currentUser()?.avatarImage + ') center/cover' : 'linear-gradient(135deg, ' + (auth.currentUser()?.avatarColor || '#8b5cf6') + ', #1e1b4b)'">
-          <span *ngIf="!auth.currentUser()?.avatarImage" class="avatar-nav-initial">{{ auth.currentUser()?.username?.[0]?.toUpperCase() }}</span>
+          <span *ngIf="!auth.currentUser()?.avatarImage" class="avatar-nav-initial">{{
+            auth.currentUser()?.username?.[0]?.toUpperCase() }}</span>
         </div>
         <div class="user-info">
           <span class="username">{{ auth.currentUser()?.username }}</span>
-          <span class="user-clan" *ngIf="auth.currentUser()?.clan"><span *ngIf="auth.currentUser()?.clanTag">[{{ auth.currentUser()?.clanTag }}] </span>{{ auth.currentUser()?.clan }}</span>
+          <span class="user-clan" *ngIf="auth.currentUser()?.clan"><span *ngIf="auth.currentUser()?.clanTag">[{{
+              auth.currentUser()?.clanTag }}] </span>{{ auth.currentUser()?.clan }}</span>
         </div>
       </a>
-      <button class="btn-logout" (click)="auth.logout()" title="Cerrar sesión">⏻</button>
+      <button class="btn-logout" (click)="showLogoutModal.set(true)" title="Cerrar sesión">✕</button>
     </div>
   </nav>
 
@@ -66,21 +68,34 @@
         <button class="close-menu-btn" (click)="closeMobileMenu()">✕</button>
       </div>
       <div class="mobile-nav-links">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="mobile-nav-item" (click)="closeMobileMenu()">Inicio</a>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="mobile-nav-item"
+          (click)="closeMobileMenu()">Inicio</a>
 
         <ng-container *ngIf="myLobbyRoute()">
-          <a [routerLink]="myLobbyRoute()" routerLinkActive="active" class="mobile-nav-item nav-lobby-active" (click)="closeMobileMenu()">
+          <a [routerLink]="myLobbyRoute()" routerLinkActive="active" class="mobile-nav-item nav-lobby-active"
+            (click)="closeMobileMenu()">
             Mi Sala
             <span class="nav-lobby-dot"></span>
           </a>
         </ng-container>
         <ng-container *ngIf="!myLobbyRoute()">
-          <a routerLink="/" class="mobile-nav-item mobile-disabled" title="Crea o únete a una partida para acceder a la sala">
+          <a routerLink="/" class="mobile-nav-item mobile-disabled"
+            title="Crea o únete a una partida para acceder a la sala">
             Lobby
           </a>
         </ng-container>
 
-        <a routerLink="/ranking" routerLinkActive="active" class="mobile-nav-item" (click)="closeMobileMenu()">Clasificación</a>
+        <a routerLink="/ranking" routerLinkActive="active" class="mobile-nav-item"
+          (click)="closeMobileMenu()">Clasificación</a>
+
+        <!-- Mobile Auth Links -->
+        <hr class="mobile-divider" *ngIf="!auth.isLoggedIn()">
+        <a routerLink="/login" *ngIf="!auth.isLoggedIn()" class="mobile-nav-item auth-mobile" (click)="closeMobileMenu()">
+          🔑 Iniciar Sesión
+        </a>
+        <a routerLink="/register" *ngIf="!auth.isLoggedIn()" class="mobile-nav-item auth-mobile-primary" (click)="closeMobileMenu()">
+          🚀 Registrarse
+        </a>
       </div>
     </div>
   </div>
@@ -97,6 +112,37 @@
       <a routerLink="/support">Soporte Técnico</a>
     </div>
     <div class="footer-divider"></div>
-    <p class="footer-copy">&copy; 2026 Payload Strategic Strike. Proyecto DAM.</p>
+    <p class="footer-copy">&copy; 2026 Payload Strategic Strike.<br> Proyecto DAM.</p>
   </footer>
+
+  <!-- ── LOGOUT CONFIRMATION MODAL ── -->
+  <div class="modal-overlay" *ngIf="showLogoutModal()" (click)="showLogoutModal.set(false)">
+    <div class="modal-panel glass-panel animate-modal logout-confirm-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">👋</span>
+          <div>
+            <h2 class="modal-title">¿Cerrar sesión?</h2>
+            <p class="modal-subtitle">Esperamos verte pronto de vuelta en el frente, comandante.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showLogoutModal.set(false)">CANCELAR</button>
+        <button class="btn btn-danger" (click)="confirmLogout()">CERRAR SESIÓN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── READY NOTIFICATION (OUTSIDE LOBBY) ── -->
+  <div class="ready-popup animate-slide-up" *ngIf="shouldShowReadyPopup()">
+    <div class="ready-popup-content glass-panel" [routerLink]="myLobbyRoute()">
+      <div class="ready-pulse"></div>
+      <div class="ready-text">
+        <strong>⚠️ ¡TODOS LISTOS!</strong>
+        <span>Haz clic aquí para volver a la sala</span>
+      </div>
+      <div class="ready-arrow">→</div>
+    </div>
+  </div>
 </div>

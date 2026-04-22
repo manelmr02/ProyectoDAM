@@ -122,7 +122,17 @@ import { RouterLink } from '@angular/router';
       text-align: center;
     }
     @media (max-width: 600px) {
-      .rules-grid { grid-template-columns: 1fr; }
+      .legal-page { padding: 20px 10px; }
+      .content-container { padding: 24px 16px; }
+      .icon-circle { font-size: 2.5rem; }
+      .legal-header h1 { font-size: 1.8rem; }
+      .rules-grid { grid-template-columns: 1fr; gap: 16px; }
+      .rule-card { padding: 16px; }
+      .rule-num { font-size: 2.5rem; top: 0; right: 10px; }
+      .rule-card h3 { font-size: 1.1rem; }
+      .rule-card p { font-size: 0.88rem; }
+      .fair-play { padding: 16px; }
+      .fair-play h2 { font-size: 1.3rem; }
     }
   `]
 })

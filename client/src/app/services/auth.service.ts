@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { ProfanityService } from './profanity.service';
 
 export interface UserStats {
   wins: number;
@@ -74,6 +75,7 @@ const SESSION_KEY = 'payload_session';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private router = inject(Router);
+  private profanity = inject(ProfanityService);
 
   // ── Reactive state ──────────────────────────────────────────────
   readonly currentUser = signal<UserProfile | null>(this.loadSession());
@@ -132,6 +134,10 @@ export class AuthService {
     }
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
       return { ok: false, error: 'Ya existe una cuenta con ese email.' };
+    }
+
+    if (this.profanity.containsBannedSubstring(username)) {
+      return { ok: false, error: 'El nombre de usuario contiene palabras no permitidas.' };
     }
 
     const defaults = generateDefaultProfile();
@@ -197,6 +203,23 @@ export class AuthService {
   updateProfile(updates: Partial<UserProfile>): { ok: boolean; error?: string } {
     const current = this.currentUser();
     if (!current) return { ok: false, error: 'No has iniciado sesión.' };
+
+    // Filter bio if present
+    if (updates.bio) {
+      updates.bio = this.profanity.filterText(updates.bio);
+    }
+    // Filter clan if present
+    if (updates.clan) {
+      if (this.profanity.hasProfanity(updates.clan)) {
+        return { ok: false, error: 'El nombre del clan contiene palabras no permitidas.' };
+      }
+    }
+    // Filter clan tag if present
+    if (updates.clanTag) {
+      if (this.profanity.containsBannedSubstring(updates.clanTag)) {
+        return { ok: false, error: 'El tag del clan contiene palabras no permitidas.' };
+      }
+    }
 
     const updated: UserProfile = { ...current, ...updates };
 

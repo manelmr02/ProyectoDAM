@@ -260,17 +260,17 @@ import { AuthService } from '../services/auth.service';
           <span class="modal-icon">🔒</span>
           <div>
             <h2 class="modal-title">Sala Privada</h2>
-            <p class="modal-subtitle">Introduce la contraseña para entrar</p>
+            <p class="modal-subtitle">Introduce el código para entrar</p>
           </div>
         </div>
         <button class="modal-close" (click)="showPasswordModal.set(false)">✕</button>
       </div>
       <div class="modal-form">
         <div class="mform-group">
-          <label for="enter-pass">Contraseña</label>
-          <input id="enter-pass" type="password" class="mform-control" [(ngModel)]="passwordInput" placeholder="••••••••">
+          <label for="enter-pass">Código de Acceso</label>
+          <input id="enter-pass" type="text" class="mform-control" [(ngModel)]="passwordInput" placeholder="Ej: 1234" autocomplete="off" style="-webkit-text-security: disc;">
         </div>
-        <div class="alert-error-inline" *ngIf="passwordError()">{{ passwordError() }}</div>
+        <div class="alert-error-inline" *ngIf="passwordError()">Código incorrecto. Inténtalo de nuevo.</div>
         <div class="modal-actions">
           <button class="btn btn-secondary" (click)="showPasswordModal.set(false)">Cancelar</button>
           <button class="btn btn-primary modal-submit-btn" (click)="confirmJoinWithPassword()">ENTRAR</button>
@@ -312,7 +312,8 @@ import { AuthService } from '../services/auth.service';
           <label for="room-desc">Descripción <span class="moptional">(Opcional)</span></label>
           <input id="room-desc" type="text" class="mform-control"
             placeholder="Describe tu partida..." name="roomDesc"
-            [(ngModel)]="draft.description" maxlength="80">
+            [(ngModel)]="draft.description" maxlength="80"
+            autocomplete="off">
         </div>
 
         <div class="mform-row">
@@ -336,15 +337,20 @@ import { AuthService } from '../services/auth.service';
           <label class="mcheckbox-label">
             <input type="checkbox" name="hasPassword" [(ngModel)]="draft.hasPassword">
             <span class="mcheckbox-custom"></span>
-            Sala privada (con contraseña)
+            Sala privada (con código)
           </label>
         </div>
 
         <div class="mform-group" *ngIf="draft.hasPassword">
-          <label for="room-pass">Contraseña de Sala <span class="req">*</span></label>
-          <input id="room-pass" type="password" class="mform-control"
-            placeholder="Mínimo 4 caracteres" name="roomPassword"
-            [(ngModel)]="draft.password" [required]="draft.hasPassword" minlength="4">
+          <label for="room-pass">Código de Acceso <span class="req">*</span></label>
+          <input id="room-pass" type="text" class="mform-control"
+            placeholder="Ej: 1234 (mín. 4 caracteres)" name="roomPassword"
+            [(ngModel)]="draft.password" [required]="draft.hasPassword" minlength="4"
+            autocomplete="off" style="-webkit-text-security: disc;">
+        </div>
+
+        <div class="alert-error-inline" *ngIf="profanityError()" style="margin-bottom: 12px;">
+          {{ profanityError() }}
         </div>
 
         <!-- Preview -->
@@ -355,7 +361,7 @@ import { AuthService } from '../services/auth.service';
             <div class="preview-meta">
               <span>🎮 {{ draft.mode }}</span>
               <span>👥 1/{{ draft.maxPlayers }}</span>
-              <span *ngIf="draft.hasPassword">🔒 Privada</span>
+              <span *ngIf="draft.hasPassword">🔒 Privada (Código)</span>
             </div>
           </div>
         </div>
@@ -441,9 +447,9 @@ import { AuthService } from '../services/auth.service';
     .mcheckbox-custom { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; border: 2px solid var(--border-light); background: rgba(0,0,0,0.3); transition: all var(--transition-fast); position:relative; }
     .mcheckbox-label input:checked ~ .mcheckbox-custom { background: var(--accent-primary); border-color: var(--accent-primary); }
     .mcheckbox-label input:checked ~ .mcheckbox-custom::after { content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-size:0.75rem; font-weight:900; }
-    .lobby-preview { display: flex; flex-direction: column; gap: 8px; }
+    .lobby-preview { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
     .preview-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-    .preview-card { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+    .preview-card { background: rgba(139,92,246,0.06); border: 1px dashed rgba(139,92,246,0.3); border-radius: 12px; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
     .preview-name { font-family: var(--font-heading); font-weight: 700; font-size: 1rem; color: var(--text-main); }
     .preview-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-muted); }
     .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; }
@@ -484,6 +490,7 @@ export class Home {
   existingLobby = signal<import('../services/lobby.service').LobbyEntry | null>(null);
   passwordInput = '';
   passwordError = signal('');
+  profanityError = signal('');
 
   /** Lobby the user is trying to join (needs password check) */
   private pendingLobbyId: number | null = null;
@@ -529,6 +536,7 @@ export class Home {
     }
 
     this.draft = this.emptyDraft();
+    this.profanityError.set('');
     this.showModal.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -576,10 +584,14 @@ export class Home {
     let lobby: import('../services/lobby.service').LobbyEntry;
     try {
       lobby = this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
-    } catch {
-      this.showModal.set(false);
-      this.showLoginRequired.set(true);
-      document.body.style.overflow = 'hidden';
+    } catch (err: any) {
+      if (err.message.includes('palabras no permitidas')) {
+        this.profanityError.set(err.message);
+      } else {
+        this.showModal.set(false);
+        this.showLoginRequired.set(true);
+        document.body.style.overflow = 'hidden';
+      }
       return;
     }
     this.closeModal();
@@ -608,7 +620,7 @@ export class Home {
     if (!this.pendingLobbyId) return;
     const lobby = this.lobbyService.getLobbyById(this.pendingLobbyId);
     if (lobby?.password !== this.passwordInput) {
-      this.passwordError.set('Contraseña incorrecta. Inténtalo de nuevo.');
+      this.passwordError.set('Código incorrecto. Inténtalo de nuevo.');
       return;
     }
     this.showPasswordModal.set(false);

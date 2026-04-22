@@ -19,7 +19,7 @@ import { ClanService } from '../services/clan.service';
           <div class="avatar-container">
             <div class="avatar-large" [style.background]="user()!.avatarImage ? 'url(' + user()!.avatarImage + ') center/cover' : avatarGradient()">
               <span *ngIf="!user()!.avatarImage" class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
-              <div class="avatar-level">{{ user()!.level }}</div>
+              <div class="avatar-level" title="Nivel de usuario">LV.{{ user()!.level }}</div>
             </div>
             <div class="avatar-overlay" (click)="fileInput.click()">
               <div class="overlay-content">
@@ -325,14 +325,15 @@ import { ClanService } from '../services/clan.service';
       font-family: var(--font-heading); text-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
     .avatar-level {
-      position: absolute; bottom: -4px; right: -4px;
+      position: absolute; bottom: -2px; right: -2px;
       background: var(--accent-primary); color: white;
-      width: 34px; height: 34px; border-radius: 50%;
+      padding: 3px 8px; border-radius: 20px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 0.9rem;
-      border: 3px solid var(--bg-main);
-      box-shadow: 0 0 10px rgba(139,92,246,0.5);
+      font-weight: 800; font-size: 0.75rem;
+      border: 2px solid #1a1a2e;
+      box-shadow: 0 0 12px rgba(139,92,246,0.5);
       font-family: var(--font-heading);
+      z-index: 5;
     }
 
     /* ── Banner Info ── */

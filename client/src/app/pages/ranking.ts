@@ -15,12 +15,12 @@ import { CommonModule } from '@angular/common';
         <table class="ranking-table">
           <thead>
             <tr>
-              <th>Rango</th>
-              <th>Jugador / Clan</th>
-              <th>Puntos de Guerra (Elo)</th>
-              <th>Ataques Realizados ⚔️</th>
-              <th>Defensas Acertadas 🛡️</th>
-              <th>Ratio de Precisión</th>
+              <th>#</th>
+              <th>Jugador</th>
+              <th>Elo</th>
+              <th class="hide-mobile">Ataques ⚔️</th>
+              <th class="hide-mobile">Defensas 🛡️</th>
+              <th class="hide-mobile">Ratio</th>
             </tr>
           </thead>
           <tbody>
@@ -33,9 +33,9 @@ import { CommonModule } from '@angular/common';
                 </div>
               </td>
               <td class="elo">{{ p.elo }}</td>
-              <td>{{ p.attacks }}</td>
-              <td>{{ p.defenses }}</td>
-              <td class="ratio" [class.high-ratio]="p.ratio > 60">{{ p.ratio }}%</td>
+              <td class="hide-mobile">{{ p.attacks }}</td>
+              <td class="hide-mobile">{{ p.defenses }}</td>
+              <td class="ratio high-ratio hide-mobile" [class.high-ratio]="p.ratio > 60">{{ p.ratio }}%</td>
             </tr>
           </tbody>
         </table>
@@ -64,6 +64,17 @@ import { CommonModule } from '@angular/common';
     .elo { font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; color: white; }
     .ratio { font-weight: 700; color: var(--text-muted); }
     .ratio.high-ratio { color: var(--accent-success); }
+
+    @media (max-width: 768px) {
+      .ranking-table { min-width: auto; }
+      .ranking-table th, .ranking-table td { padding: 12px 8px; }
+      .hide-mobile { display: none; }
+      
+      .rank-num { font-size: 0.95rem; }
+      .top-3 .rank-num { font-size: 1.1rem; }
+      .player-col strong { font-size: 0.95rem; }
+      .elo { font-size: 1rem; }
+    }
   `]
 })
 export class Ranking {

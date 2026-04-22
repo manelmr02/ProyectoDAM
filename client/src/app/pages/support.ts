@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -19,7 +19,10 @@ import { RouterLink } from '@angular/router';
           <div class="support-card glass-panel">
             <h3>📧 Contacto Directo</h3>
             <p>Envíanos un correo con los detalles de tu problema, capturas de pantalla y tu nombre de usuario.</p>
-            <a href="mailto:soporte@payload-strike.com" class="support-link">soporte&#64;payload-strike.com</a>
+            <div class="email-container">
+              <a href="mailto:soporte@payload-strike.com" class="support-link">soporte&#64;payload-strike.com</a>
+              <button class="btn-copy" (click)="copyEmail()" [title]="copyLabel()">{{ copyLabel() === 'Copiado!' ? '✅' : '📋' }}</button>
+            </div>
           </div>
 
           <div class="support-card glass-panel">
@@ -121,9 +124,41 @@ import { RouterLink } from '@angular/router';
       margin-top: 48px;
       text-align: center;
     }
+    .email-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .btn-copy {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-copy:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
     @media (max-width: 600px) {
       .support-grid { grid-template-columns: 1fr; }
     }
   `]
 })
-export class Support {}
+export class Support {
+  copyLabel = signal('Copiar');
+
+  copyEmail() {
+    navigator.clipboard.writeText('soporte@payload-strike.com');
+    this.copyLabel.set('Copiado!');
+    setTimeout(() => this.copyLabel.set('Copiar'), 2000);
+  }
+}
