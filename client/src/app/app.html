@@ -46,12 +46,12 @@
       <a routerLink="/profile" class="user-profile-link">
         <div class="level-badge">{{ auth.currentUser()?.level }}</div>
         <div class="avatar-nav"
-          [style.background]="'linear-gradient(135deg, ' + (auth.currentUser()?.avatarColor || '#8b5cf6') + ', #1e1b4b)'">
-          <span class="avatar-nav-initial">{{ auth.currentUser()?.username?.[0]?.toUpperCase() }}</span>
+          [style.background]="auth.currentUser()?.avatarImage ? 'url(' + auth.currentUser()?.avatarImage + ') center/cover' : 'linear-gradient(135deg, ' + (auth.currentUser()?.avatarColor || '#8b5cf6') + ', #1e1b4b)'">
+          <span *ngIf="!auth.currentUser()?.avatarImage" class="avatar-nav-initial">{{ auth.currentUser()?.username?.[0]?.toUpperCase() }}</span>
         </div>
         <div class="user-info">
           <span class="username">{{ auth.currentUser()?.username }}</span>
-          <span class="user-clan" *ngIf="auth.currentUser()?.clan">{{ auth.currentUser()?.clan }}</span>
+          <span class="user-clan" *ngIf="auth.currentUser()?.clan"><span *ngIf="auth.currentUser()?.clanTag">[{{ auth.currentUser()?.clanTag }}] </span>{{ auth.currentUser()?.clan }}</span>
         </div>
       </a>
       <button class="btn-logout" (click)="auth.logout()" title="Cerrar sesión">⏻</button>

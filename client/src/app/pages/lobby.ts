@@ -118,8 +118,8 @@ const PHRASES: { sender: string; text: string }[] = [
               [class.player-ready]="p.status === 'Ready'"
               [class.player-me]="p.name === myName()">
 
-              <div class="player-avatar" [style.background]="p.avatarColor">
-                {{ p.name.charAt(0).toUpperCase() }}
+              <div class="player-avatar" [style.background]="p.avatarImage ? 'url(' + p.avatarImage + ') center/cover' : p.avatarColor">
+                <span *ngIf="!p.avatarImage">{{ p.name.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="player-details">
                 <div class="player-name-row">
@@ -127,7 +127,7 @@ const PHRASES: { sender: string; text: string }[] = [
                   <span class="owner-crown" *ngIf="p.isOwner" title="Host">👑</span>
                   <span class="me-tag" *ngIf="p.name === myName()">TÚ</span>
                 </div>
-                <span class="player-clan" *ngIf="p.clan">[{{ p.clan }}]</span>
+                <span class="player-clan" *ngIf="p.clan"><span *ngIf="p.clanTag">[{{ p.clanTag }}] </span>{{ p.clan }}</span>
               </div>
               <div class="player-status-dot" [class.ready]="p.status === 'Ready'" [title]="p.status">
                 <span class="status-text">{{ p.status }}</span>

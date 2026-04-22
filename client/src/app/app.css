@@ -767,9 +767,15 @@
   gap: 12px;
 }
 
+.mobile-nav-item.active {
+  padding-left: 24px;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--accent-secondary);
+}
+
 .mobile-nav-item:active {
   background: rgba(139, 92, 246, 0.2);
-  transform: scale(0.98);
+  padding-left: 24px;
 }
 
 .mobile-disabled {

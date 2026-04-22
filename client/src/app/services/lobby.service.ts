@@ -6,9 +6,11 @@ import { AuthService } from './auth.service';
 export interface LobbyPlayer {
   name: string;
   clan: string;
+  clanTag?: string;
   status: 'Ready' | 'Waiting';
   isOwner?: boolean;
   avatarColor: string;
+  avatarImage?: string;
 }
 
 export interface LobbyEntry {
@@ -223,9 +225,9 @@ export class LobbyService {
     return this.lobbies().find(l => l.id === id);
   }
 
-  /** Returns the lobby owned by the given username, or undefined */
+  /** Returns the lobby the given username is currently in, either as host or player */
   getUserLobby(username: string): LobbyEntry | undefined {
-    return this.lobbies().find(l => l.host === username && l.isOwn);
+    return this.lobbies().find(l => l.playerList.some(p => p.name === username));
   }
 
   /** Deletes a lobby by ID (only the owner should call this) */
@@ -262,9 +264,11 @@ export class LobbyService {
       playerList: [{
         name: host,
         clan: user?.clan ?? '',
+        clanTag: user?.clanTag,
         status: 'Waiting',
         isOwner: true,
-        avatarColor: authorColor,
+        avatarColor: user?.avatarColor || authorColor,
+        avatarImage: user?.avatarImage,
       }],
     };
 
@@ -295,9 +299,11 @@ export class LobbyService {
           {
             name: username,
             clan,
+            clanTag: user.clanTag,
             status: 'Waiting',
             isOwner: false,
-            avatarColor: AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
+            avatarColor: user.avatarColor || AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
+            avatarImage: user.avatarImage,
           }
         ],
       };

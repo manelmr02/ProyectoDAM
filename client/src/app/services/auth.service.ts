@@ -20,9 +20,11 @@ export interface UserProfile {
   createdAt: string;
   // Extended profile fields
   avatarColor: string;
+  avatarImage?: string;
   bio: string;
   title: string;
   faction: string;
+  clanTag?: string;
   stats: UserStats;
 }
 
@@ -140,9 +142,11 @@ export class AuthService {
       level: 1,
       createdAt: new Date().toISOString(),
       avatarColor: defaults.avatarColor!,
+      avatarImage: undefined,
       bio: defaults.bio!,
       title: defaults.title!,
       faction: defaults.faction!,
+      clanTag: '',
       stats: defaults.stats!,
     };
 
@@ -216,9 +220,11 @@ export class AuthService {
       const migrated: UserProfile = {
         ...profile,
         avatarColor: profile.avatarColor || defaults.avatarColor!,
+        avatarImage: (profile as any).avatarImage || undefined,
         bio: profile.bio || defaults.bio!,
         title: profile.title || defaults.title!,
         faction: profile.faction || defaults.faction!,
+        clanTag: (profile as any).clanTag || '',
         stats: defaults.stats!,
       };
       this.startSession(migrated);

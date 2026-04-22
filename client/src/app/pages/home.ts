@@ -14,7 +14,7 @@ import { AuthService } from '../services/auth.service';
 
     <!-- ═══════════════ HERO ═══════════════ -->
     <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
-      <div class="hero-content">
+                        <div class="hero-content">
         <span class="badge">Fase de Preparación Activa</span>
         <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
         <p class="subtitle">Decide el destino de tu facción. Ataca a tus rivales o asegura tus defensas sin saber cuál será el próximo movimiento de tus enemigos en este enfrentamiento todos contra todos.</p>

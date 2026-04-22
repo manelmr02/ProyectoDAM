@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, UserProfile } from '../services/auth.service';
 import { LobbyService } from '../services/lobby.service';
+import { ClanService } from '../services/clan.service';
 
 @Component({
   selector: 'app-profile',
@@ -15,8 +16,8 @@ import { LobbyService } from '../services/lobby.service';
       <div class="profile-banner glass-panel">
         <div class="banner-bg"></div>
         <div class="banner-content">
-          <div class="avatar-large" [style.background]="avatarGradient()">
-            <span class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
+          <div class="avatar-large" [style.background]="user()!.avatarImage ? 'url(' + user()!.avatarImage + ') center/cover' : avatarGradient()">
+            <span *ngIf="!user()!.avatarImage" class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
             <div class="avatar-level">{{ user()!.level }}</div>
           </div>
 
@@ -27,7 +28,7 @@ import { LobbyService } from '../services/lobby.service';
             </div>
             <div class="profile-meta-row">
               <span class="meta-chip faction-chip">
-                <span class="chip-icon">⚔</span> {{ user()!.faction || user()!.clan || 'Sin Facción' }}
+                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Facción' }}
               </span>
               <span class="meta-chip">
                 <span class="chip-icon">📧</span> {{ user()!.email }}
@@ -67,10 +68,28 @@ import { LobbyService } from '../services/lobby.service';
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="edit-clan">Clan</label>
+            <div class="form-group" *ngIf="!user()!.clanTag">
+              <label for="edit-clan">Clan a unirse o crear (Nombre)</label>
               <input id="edit-clan" type="text" class="form-control"
-                placeholder="Nombre de tu clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
+                placeholder="Nombre del clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
+              
+              <label for="edit-clan-tag" style="margin-top: 8px;">Tag (sólo si creas uno nuevo)</label>
+              <input id="edit-clan-tag" type="text" class="form-control"
+                placeholder="Ej: DAM, STK" [(ngModel)]="draft.clanTag" name="clanTag" maxlength="4" style="text-transform: uppercase;">
+            </div>
+            
+            <div class="form-group" *ngIf="user()!.clanTag">
+               <label>Tu Clan</label>
+               <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                 <span><b>[{{user()!.clanTag}}]</b> {{user()!.clan}}</span>
+                 <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" (click)="leaveClan()">Salir del clan</button>
+               </div>
+            </div>
+
+            <div class="form-group">
+              <label>Avatar Personalizado</label>
+              <input type="file" class="form-control" accept="image/*" (change)="onFileSelected($event)">
+              <button *ngIf="draft.avatarImage" type="button" class="btn btn-secondary" style="margin-top: 8px; padding: 6px 12px;" (click)="draft.avatarImage = undefined">✕ Eliminar Foto</button>
             </div>
 
             <div class="form-group">
@@ -421,6 +440,7 @@ import { LobbyService } from '../services/lobby.service';
 export class Profile implements OnInit {
   private auth = inject(AuthService);
   private lobbyService = inject(LobbyService);
+  private clanService = inject(ClanService);
   private router = inject(Router);
 
   editing = signal(false);
@@ -474,7 +494,9 @@ export class Profile implements OnInit {
     bio: '',
     title: '',
     clan: '',
+    clanTag: '',
     avatarColor: '',
+    avatarImage: undefined as string | undefined,
   };
 
   availableTitles = [
@@ -500,7 +522,9 @@ export class Profile implements OnInit {
       bio: migrated.bio || '',
       title: migrated.title || 'Recluta Novato',
       clan: migrated.clan || '',
+      clanTag: migrated.clanTag || '',
       avatarColor: migrated.avatarColor || '#8b5cf6',
+      avatarImage: migrated.avatarImage,
     };
   }
 
@@ -513,17 +537,72 @@ export class Profile implements OnInit {
         bio: u.bio || '',
         title: u.title || 'Recluta Novato',
         clan: u.clan || '',
+        clanTag: u.clanTag || '',
         avatarColor: u.avatarColor || '#8b5cf6',
+        avatarImage: u.avatarImage,
       };
     }
   }
 
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.draft.avatarImage = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  leaveClan() {
+    if (this.user()!.clan) {
+       this.clanService.leaveClan(this.user()!.clan, this.user()!.username);
+       this.auth.updateProfile({ clan: '', clanTag: '' });
+       this.editing.set(false);
+       setTimeout(() => this.toggleEdit(), 10);
+    }
+  }
+
   saveProfile() {
+    const clanChanged = this.draft.clan !== (this.user()!.clan || '');
+    const tagChanged = this.draft.clanTag !== (this.user()!.clanTag || '');
+
+    if (clanChanged || tagChanged) {
+      if (this.draft.clan && !this.user()!.clanTag) {
+          if (this.draft.clanTag) {
+              // Create
+              const res = this.clanService.createClan(this.draft.clan.trim(), this.draft.clanTag.trim(), this.user()!.username);
+              if (!res.ok) {
+                  this.saveMsg.set('Error: ' + res.error);
+                  return;
+              }
+              this.draft.clanTag = res.clan!.tag;
+              this.draft.clan = res.clan!.name;
+          } else {
+              // Join
+              const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
+              if (!res.ok) {
+                  this.saveMsg.set('Error: ' + res.error);
+                  return;
+              }
+              this.draft.clanTag = res.clan!.tag;
+              this.draft.clan = res.clan!.name;
+          }
+      } else if (!this.draft.clan && this.user()!.clanTag) {
+          // Did they clear the clan name? Assume they want to leave
+          this.leaveClan();
+          return;
+      }
+    }
+
     const result = this.auth.updateProfile({
       bio: this.draft.bio.trim(),
       title: this.draft.title,
       clan: this.draft.clan.trim(),
+      clanTag: this.draft.clanTag?.trim() || '',
       avatarColor: this.draft.avatarColor,
+      avatarImage: this.draft.avatarImage,
     });
 
     if (result.ok) {
