@@ -52,14 +52,14 @@ function generateDefaultProfile(): Partial<UserProfile> {
     title: TITLES[Math.floor(Math.random() * TITLES.length)],
     faction: FACTIONS[Math.floor(Math.random() * FACTIONS.length)],
     stats: {
-      wins: Math.floor(Math.random() * 5),
-      losses: Math.floor(Math.random() * 3),
-      draws: Math.floor(Math.random() * 2),
+      wins: 0,
+      losses: 0,
+      draws: 0,
       gamesPlayed: 0,
       winStreak: 0,
       bestWinStreak: 0,
-      accuracy: Math.floor(50 + Math.random() * 30),
-      totalPoints: Math.floor(Math.random() * 150),
+      accuracy: 0,
+      totalPoints: 0,
     },
   };
 }
@@ -213,9 +213,11 @@ export class AuthService {
     return { ok: true };
   }
 
-  /** Migrates old profiles without extended fields */
+  /** Migrates old profiles without extended fields or with legacy random stats */
   ensureProfileDefaults(profile: UserProfile): UserProfile {
-    if (!profile.stats) {
+    const isLegacyStats = profile.stats && profile.stats.gamesPlayed === 0 && (profile.stats.totalPoints > 0 || profile.stats.accuracy > 0);
+    
+    if (!profile.stats || isLegacyStats) {
       const defaults = generateDefaultProfile();
       const migrated: UserProfile = {
         ...profile,
