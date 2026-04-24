@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { ProfanityService } from './profanity.service';
 
 export interface UserStats {
   wins: number;
@@ -20,9 +21,11 @@ export interface UserProfile {
   createdAt: string;
   // Extended profile fields
   avatarColor: string;
+  avatarImage?: string;
   bio: string;
   title: string;
   faction: string;
+  clanTag?: string;
   stats: UserStats;
 }
 
@@ -50,14 +53,14 @@ function generateDefaultProfile(): Partial<UserProfile> {
     title: TITLES[Math.floor(Math.random() * TITLES.length)],
     faction: FACTIONS[Math.floor(Math.random() * FACTIONS.length)],
     stats: {
-      wins: Math.floor(Math.random() * 5),
-      losses: Math.floor(Math.random() * 3),
-      draws: Math.floor(Math.random() * 2),
+      wins: 0,
+      losses: 0,
+      draws: 0,
       gamesPlayed: 0,
       winStreak: 0,
       bestWinStreak: 0,
-      accuracy: Math.floor(50 + Math.random() * 30),
-      totalPoints: Math.floor(Math.random() * 150),
+      accuracy: 0,
+      totalPoints: 0,
     },
   };
 }
@@ -72,6 +75,7 @@ const SESSION_KEY = 'payload_session';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private router = inject(Router);
+  private profanity = inject(ProfanityService);
 
   // ── Reactive state ──────────────────────────────────────────────
   readonly currentUser = signal<UserProfile | null>(this.loadSession());
@@ -132,6 +136,10 @@ export class AuthService {
       return { ok: false, error: 'Ya existe una cuenta con ese email.' };
     }
 
+    if (this.profanity.containsBannedSubstring(username)) {
+      return { ok: false, error: 'El nombre de usuario contiene palabras no permitidas.' };
+    }
+
     const defaults = generateDefaultProfile();
     const profile: UserProfile = {
       username,
@@ -140,9 +148,11 @@ export class AuthService {
       level: 1,
       createdAt: new Date().toISOString(),
       avatarColor: defaults.avatarColor!,
+      avatarImage: undefined,
       bio: defaults.bio!,
       title: defaults.title!,
       faction: defaults.faction!,
+      clanTag: '',
       stats: defaults.stats!,
     };
 
@@ -194,6 +204,23 @@ export class AuthService {
     const current = this.currentUser();
     if (!current) return { ok: false, error: 'No has iniciado sesión.' };
 
+    // Filter bio if present
+    if (updates.bio) {
+      updates.bio = this.profanity.filterText(updates.bio);
+    }
+    // Filter clan if present
+    if (updates.clan) {
+      if (this.profanity.hasProfanity(updates.clan)) {
+        return { ok: false, error: 'El nombre del clan contiene palabras no permitidas.' };
+      }
+    }
+    // Filter clan tag if present
+    if (updates.clanTag) {
+      if (this.profanity.containsBannedSubstring(updates.clanTag)) {
+        return { ok: false, error: 'El tag del clan contiene palabras no permitidas.' };
+      }
+    }
+
     const updated: UserProfile = { ...current, ...updates };
 
     // Update in users list
@@ -209,16 +236,20 @@ export class AuthService {
     return { ok: true };
   }
 
-  /** Migrates old profiles without extended fields */
+  /** Migrates old profiles without extended fields or with legacy random stats */
   ensureProfileDefaults(profile: UserProfile): UserProfile {
-    if (!profile.stats) {
+    const isLegacyStats = profile.stats && profile.stats.gamesPlayed === 0 && (profile.stats.totalPoints > 0 || profile.stats.accuracy > 0);
+    
+    if (!profile.stats || isLegacyStats) {
       const defaults = generateDefaultProfile();
       const migrated: UserProfile = {
         ...profile,
         avatarColor: profile.avatarColor || defaults.avatarColor!,
+        avatarImage: (profile as any).avatarImage || undefined,
         bio: profile.bio || defaults.bio!,
         title: profile.title || defaults.title!,
         faction: profile.faction || defaults.faction!,
+        clanTag: (profile as any).clanTag || '',
         stats: defaults.stats!,
       };
       this.startSession(migrated);

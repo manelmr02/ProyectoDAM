@@ -1,14 +1,17 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { AuthService } from './auth.service';
+import { ProfanityService } from './profanity.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface LobbyPlayer {
   name: string;
   clan: string;
+  clanTag?: string;
   status: 'Ready' | 'Waiting';
   isOwner?: boolean;
   avatarColor: string;
+  avatarImage?: string;
 }
 
 export interface LobbyEntry {
@@ -26,6 +29,8 @@ export interface LobbyEntry {
   createdAt: string;
   /** Full player list for when you're inside the lobby */
   playerList: LobbyPlayer[];
+  /** Timestamp when the countdown started (all ready) */
+  startReadyTime?: number | null;
 }
 
 export interface CreateLobbyDto {
@@ -81,6 +86,7 @@ const NPC_CHATS: { sender: string; text: string }[] = [
 @Injectable({ providedIn: 'root' })
 export class LobbyService {
   private auth = inject(AuthService);
+  private profanity = inject(ProfanityService);
   private readonly onStorageChange = (event: StorageEvent) => {
     if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
     this.syncFromStorage();
@@ -223,9 +229,9 @@ export class LobbyService {
     return this.lobbies().find(l => l.id === id);
   }
 
-  /** Returns the lobby owned by the given username, or undefined */
+  /** Returns the lobby the given username is currently in, either as host or player */
   getUserLobby(username: string): LobbyEntry | undefined {
-    return this.lobbies().find(l => l.host === username && l.isOwn);
+    return this.lobbies().find(l => l.playerList.some(p => p.name === username));
   }
 
   /** Deletes a lobby by ID (only the owner should call this) */
@@ -243,6 +249,10 @@ export class LobbyService {
 
     // Prevent creating multiple rooms: remove all previous owned rooms
     this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
+
+    if (this.profanity.hasProfanity(dto.name) || this.profanity.hasProfanity(dto.description)) {
+      throw new Error('El nombre o descripción de la sala contiene palabras no permitidas.');
+    }
 
     const authorColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
@@ -262,9 +272,11 @@ export class LobbyService {
       playerList: [{
         name: host,
         clan: user?.clan ?? '',
+        clanTag: user?.clanTag,
         status: 'Waiting',
         isOwner: true,
-        avatarColor: authorColor,
+        avatarColor: user?.avatarColor || authorColor,
+        avatarImage: user?.avatarImage,
       }],
     };
 
@@ -295,9 +307,11 @@ export class LobbyService {
           {
             name: username,
             clan,
+            clanTag: user.clanTag,
             status: 'Waiting',
             isOwner: false,
-            avatarColor: AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
+            avatarColor: user.avatarColor || AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
+            avatarImage: user.avatarImage,
           }
         ],
       };
@@ -308,7 +322,7 @@ export class LobbyService {
     return target;
   }
 
-  /** Removes the current user from the lobby (unless they are the host) */
+  /** Removes the current user from the lobby (or deletes it if host) */
   leaveLobby(id: number): void {
     const user = this.auth.currentUser();
     const username = user?.username;
@@ -317,8 +331,11 @@ export class LobbyService {
     const target = this.getLobbyById(id);
     if (!target) return;
 
-    // A host doesn't "leave" their own room by navigating away
-    if (target.host === username) return;
+    // If the host leaves, the room is deleted
+    if (target.host === username) {
+      this.deleteLobby(id);
+      return;
+    }
 
     const isMember = target.playerList.some(p => p.name === username);
     if (isMember) {
@@ -336,11 +353,17 @@ export class LobbyService {
     this.lobbies.update(list =>
       list.map(l => {
         if (l.id !== lobbyId) return l;
+        const updatedPlayers = l.playerList.map(p =>
+          p.name === playerName ? { ...p, status } : p
+        );
+
+        // Check if ALL are ready now
+        const allReady = updatedPlayers.length >= 2 && updatedPlayers.every(p => p.status === 'Ready');
+        
         return {
           ...l,
-          playerList: l.playerList.map(p =>
-            p.name === playerName ? { ...p, status } : p
-          ),
+          playerList: updatedPlayers,
+          startReadyTime: allReady ? (l.startReadyTime || Date.now()) : null
         };
       })
     );

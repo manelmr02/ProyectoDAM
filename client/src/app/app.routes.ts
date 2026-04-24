@@ -5,6 +5,11 @@ import { Register } from './pages/register';
 import { Lobby } from './pages/lobby';
 import { Ranking } from './pages/ranking';
 import { Profile } from './pages/profile';
+import { Battle } from './pages/battle';
+import { Terms } from './pages/terms';
+import { Privacy } from './pages/privacy';
+import { Rules } from './pages/rules';
+import { Support } from './pages/support';
 
 export const routes: Routes = [
   { path: '',              component: Home },
@@ -12,7 +17,12 @@ export const routes: Routes = [
   { path: 'register',      component: Register },
   { path: 'lobby/:id',     component: Lobby },
   { path: 'lobby',         component: Lobby },
+  { path: 'battle/:id',    component: Battle },
   { path: 'ranking',       component: Ranking },
   { path: 'profile',       component: Profile },
+  { path: 'terms',         component: Terms },
+  { path: 'privacy',       component: Privacy },
+  { path: 'rules',         component: Rules },
+  { path: 'support',       component: Support },
   { path: '**',            redirectTo: '' }
 ];

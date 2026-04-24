@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, UserProfile } from '../services/auth.service';
 import { LobbyService } from '../services/lobby.service';
+import { ClanService } from '../services/clan.service';
 
 @Component({
   selector: 'app-profile',
@@ -15,19 +16,28 @@ import { LobbyService } from '../services/lobby.service';
       <div class="profile-banner glass-panel">
         <div class="banner-bg"></div>
         <div class="banner-content">
-          <div class="avatar-large" [style.background]="avatarGradient()">
-            <span class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
-            <div class="avatar-level">{{ user()!.level }}</div>
+          <div class="avatar-container">
+            <div class="avatar-large" [style.background]="user()!.avatarImage ? 'url(' + user()!.avatarImage + ') center/cover' : avatarGradient()">
+              <span *ngIf="!user()!.avatarImage" class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
+              <div class="avatar-level" title="Nivel de usuario">LV.{{ user()!.level }}</div>
+            </div>
+            <div class="avatar-overlay" (click)="fileInput.click()">
+              <div class="overlay-content">
+                <span class="pencil-icon">✏️</span>
+                <span class="overlay-text">Cambiar foto</span>
+              </div>
+            </div>
+            <input #fileInput type="file" style="display: none;" accept="image/*" (change)="onFileSelected($event)">
           </div>
 
           <div class="banner-info">
             <div class="banner-top-row">
               <h1 class="profile-username">{{ user()!.username }}</h1>
-              <span class="title-badge">{{ user()!.title || 'Recluta Novato' }}</span>
+              <span class="title-badge">{{ combatRank() }}</span>
             </div>
             <div class="profile-meta-row">
               <span class="meta-chip faction-chip">
-                <span class="chip-icon">⚔</span> {{ user()!.faction || user()!.clan || 'Sin Facción' }}
+                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Facción' }}
               </span>
               <span class="meta-chip">
                 <span class="chip-icon">📧</span> {{ user()!.email }}
@@ -43,6 +53,10 @@ import { LobbyService } from '../services/lobby.service';
             <span *ngIf="!editing()">✏️ Editar Perfil</span>
             <span *ngIf="editing()">✕ Cancelar</span>
           </button>
+        </div>
+
+        <div class="banner-feedback" *ngIf="saveMsg() && !editing()">
+          <span class="save-icon">✅</span> {{ saveMsg() }}
         </div>
       </div>
 
@@ -61,16 +75,42 @@ import { LobbyService } from '../services/lobby.service';
             </div>
 
             <div class="form-group">
-              <label for="edit-title">Título de Combate</label>
-              <select id="edit-title" class="form-control" [(ngModel)]="draft.title" name="title">
-                <option *ngFor="let t of availableTitles" [value]="t">{{ t }}</option>
-              </select>
+              <label>Rango de Combate</label>
+              <div class="rank-display">
+                <span class="rank-icon">🎖️</span>
+                <span class="rank-name">{{ combatRank() }}</span>
+                <span class="rank-hint">(Basado en tus victorias)</span>
+              </div>
+            </div>
+
+            <div class="form-group" *ngIf="!user()!.clanTag">
+              <label for="edit-clan">Clan a unirse o crear (Nombre)</label>
+              <input id="edit-clan" type="text" class="form-control"
+                placeholder="Nombre del clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
+              
+              <label for="edit-clan-tag" style="margin-top: 8px;">Tag (sólo si creas uno nuevo)</label>
+              <input id="edit-clan-tag" type="text" class="form-control"
+                placeholder="Ej: DAM, STK" [(ngModel)]="draft.clanTag" name="clanTag" maxlength="4" style="text-transform: uppercase;">
+            </div>
+            
+            <div class="form-group" *ngIf="user()!.clanTag">
+               <label>Tu Clan</label>
+               <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                 <span><b>[{{user()!.clanTag}}]</b> {{user()!.clan}}</span>
+                 <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" (click)="leaveClan()">Salir del clan</button>
+               </div>
             </div>
 
             <div class="form-group">
-              <label for="edit-clan">Clan</label>
-              <input id="edit-clan" type="text" class="form-control"
-                placeholder="Nombre de tu clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
+              <label>Avatar Personalizado</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" class="btn btn-secondary" style="padding: 10px 16px; font-size: 0.85rem;" (click)="fileInput.click()">
+                  📁 Seleccionar Archivo
+                </button>
+                <button *ngIf="draft.avatarImage" type="button" class="btn btn-secondary" style="padding: 10px 16px; font-size: 0.85rem; border-color: var(--accent-danger); color: var(--accent-danger);" (click)="draft.avatarImage = undefined">
+                  ✕ Eliminar Foto
+                </button>
+              </div>
             </div>
 
             <div class="form-group">
@@ -236,26 +276,64 @@ import { LobbyService } from '../services/lobby.service';
     }
 
     /* ── Avatar ── */
+    .avatar-container {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
     .avatar-large {
-      width: 110px; height: 110px; border-radius: 50%; flex-shrink: 0;
+      width: 100%; height: 100%; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       position: relative;
       box-shadow: 0 0 30px rgba(139,92,246,0.3), inset 0 0 20px rgba(0,0,0,0.2);
       border: 3px solid rgba(255,255,255,0.15);
+      transition: all 0.3s ease;
+      z-index: 1;
     }
+    .avatar-container:hover .avatar-large {
+      filter: brightness(0.6) blur(2px);
+      transform: scale(1.02);
+    }
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      opacity: 0;
+      transition: all 0.3s ease;
+      border-radius: 50%;
+    }
+    .avatar-container:hover .avatar-overlay {
+      opacity: 1;
+    }
+    .overlay-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: white;
+    }
+    .pencil-icon { font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .overlay-text { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; }
+
     .avatar-initial {
       font-size: 2.8rem; font-weight: 800; color: white;
       font-family: var(--font-heading); text-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
     .avatar-level {
-      position: absolute; bottom: -4px; right: -4px;
+      position: absolute; bottom: -2px; right: -2px;
       background: var(--accent-primary); color: white;
-      width: 34px; height: 34px; border-radius: 50%;
+      padding: 3px 8px; border-radius: 20px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 0.9rem;
-      border: 3px solid var(--bg-main);
-      box-shadow: 0 0 10px rgba(139,92,246,0.5);
+      font-weight: 800; font-size: 0.75rem;
+      border: 2px solid #1a1a2e;
+      box-shadow: 0 0 12px rgba(139,92,246,0.5);
       font-family: var(--font-heading);
+      z-index: 5;
     }
 
     /* ── Banner Info ── */
@@ -323,6 +401,19 @@ import { LobbyService } from '../services/lobby.service';
 
     .char-count { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
 
+    .rank-display {
+      background: rgba(0,0,0,0.35);
+      padding: 12px 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border-light);
+    }
+    .rank-icon { font-size: 1.2rem; }
+    .rank-name { font-weight: 700; color: var(--accent-primary); }
+    .rank-hint { font-size: 0.75rem; color: var(--text-muted); }
+
     .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
     .color-swatch {
       width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
@@ -340,6 +431,25 @@ import { LobbyService } from '../services/lobby.service';
       color: var(--accent-success); padding: 10px 16px; border-radius: 8px;
       font-weight: 600; font-size: 0.9rem;
       animation: slideDown 0.3s ease forwards;
+    }
+
+    .banner-feedback {
+      position: absolute;
+      bottom: 20px;
+      right: 40px;
+      background: rgba(16,185,129,0.9);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 10;
+      animation: slideDown 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
     }
 
     /* ── Stats ── */
@@ -421,6 +531,7 @@ import { LobbyService } from '../services/lobby.service';
 export class Profile implements OnInit {
   private auth = inject(AuthService);
   private lobbyService = inject(LobbyService);
+  private clanService = inject(ClanService);
   private router = inject(Router);
 
   editing = signal(false);
@@ -434,6 +545,16 @@ export class Profile implements OnInit {
       wins: 0, losses: 0, draws: 0, gamesPlayed: 0,
       winStreak: 0, bestWinStreak: 0, accuracy: 0, totalPoints: 0,
     };
+  });
+
+  combatRank = computed(() => {
+    const wins = this.stats().wins;
+    if (wins >= 101) return 'Leyenda del Campo de Batalla';
+    if (wins >= 51)  return 'General de Brigada';
+    if (wins >= 31)  return 'Comandante de Campo';
+    if (wins >= 16)  return 'Sargento Táctico';
+    if (wins >= 6)   return 'Soldado de Élite';
+    return 'Recluta Novato';
   });
 
   avatarGradient = computed(() => {
@@ -474,7 +595,9 @@ export class Profile implements OnInit {
     bio: '',
     title: '',
     clan: '',
+    clanTag: '',
     avatarColor: '',
+    avatarImage: undefined as string | undefined,
   };
 
   availableTitles = [
@@ -500,7 +623,9 @@ export class Profile implements OnInit {
       bio: migrated.bio || '',
       title: migrated.title || 'Recluta Novato',
       clan: migrated.clan || '',
+      clanTag: migrated.clanTag || '',
       avatarColor: migrated.avatarColor || '#8b5cf6',
+      avatarImage: migrated.avatarImage,
     };
   }
 
@@ -513,17 +638,80 @@ export class Profile implements OnInit {
         bio: u.bio || '',
         title: u.title || 'Recluta Novato',
         clan: u.clan || '',
+        clanTag: u.clanTag || '',
         avatarColor: u.avatarColor || '#8b5cf6',
+        avatarImage: u.avatarImage,
       };
     }
   }
 
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        const base64 = e.target.result as string;
+        this.draft.avatarImage = base64;
+        
+        // If not editing, save immediately
+        if (!this.editing()) {
+          this.auth.updateProfile({ avatarImage: base64 });
+          this.saveMsg.set('Foto de perfil actualizada.');
+          setTimeout(() => this.saveMsg.set(''), 2000);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  leaveClan() {
+    if (this.user()!.clan) {
+       this.clanService.leaveClan(this.user()!.clan, this.user()!.username);
+       this.auth.updateProfile({ clan: '', clanTag: '' });
+       this.editing.set(false);
+       setTimeout(() => this.toggleEdit(), 10);
+    }
+  }
+
   saveProfile() {
+    const clanChanged = this.draft.clan !== (this.user()!.clan || '');
+    const tagChanged = this.draft.clanTag !== (this.user()!.clanTag || '');
+
+    if (clanChanged || tagChanged) {
+      if (this.draft.clan && !this.user()!.clanTag) {
+          if (this.draft.clanTag) {
+              // Create
+              const res = this.clanService.createClan(this.draft.clan.trim(), this.draft.clanTag.trim(), this.user()!.username);
+              if (!res.ok) {
+                  this.saveMsg.set('Error: ' + res.error);
+                  return;
+              }
+              this.draft.clanTag = res.clan!.tag;
+              this.draft.clan = res.clan!.name;
+          } else {
+              // Join
+              const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
+              if (!res.ok) {
+                  this.saveMsg.set('Error: ' + res.error);
+                  return;
+              }
+              this.draft.clanTag = res.clan!.tag;
+              this.draft.clan = res.clan!.name;
+          }
+      } else if (!this.draft.clan && this.user()!.clanTag) {
+          // Did they clear the clan name? Assume they want to leave
+          this.leaveClan();
+          return;
+      }
+    }
+
     const result = this.auth.updateProfile({
       bio: this.draft.bio.trim(),
       title: this.draft.title,
       clan: this.draft.clan.trim(),
+      clanTag: this.draft.clanTag?.trim() || '',
       avatarColor: this.draft.avatarColor,
+      avatarImage: this.draft.avatarImage,
     });
 
     if (result.ok) {

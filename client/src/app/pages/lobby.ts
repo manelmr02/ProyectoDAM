@@ -1,24 +1,25 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { LobbyService, LobbyEntry } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
+import { ProfanityService } from '../services/profanity.service';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
 // NPC phrases for random chat simulation
 const PHRASES: { sender: string; text: string }[] = [
-  { sender: 'ComandanteRex',  text: 'Prepárense para caer.' },
-  { sender: 'NightStalker',   text: 'Esta vez no habrá piedad.' },
-  { sender: 'IronFalcon',     text: '¿Alguien tiene estrategia?' },
-  { sender: 'GhostReaper',    text: 'El mejor gana, siempre.' },
-  { sender: 'ThunderBolt',    text: 'Vamos a por todas!' },
-  { sender: 'DarkPhoenix',    text: 'Primera vez, pero no seré el último.' },
-  { sender: 'CrimsonBlade',   text: 'La defensa gana campeonatos.' },
-  { sender: 'ShadowMind',     text: '...' },
-  { sender: 'NovaCaptain',    text: 'Atacamos o esperamos?' },
-  { sender: 'FrostWarden',    text: 'Silencio antes de la tormenta.' },
+  { sender: 'ComandanteRex', text: 'Prepárense para caer.' },
+  { sender: 'NightStalker', text: 'Esta vez no habrá piedad.' },
+  { sender: 'IronFalcon', text: '¿Alguien tiene estrategia?' },
+  { sender: 'GhostReaper', text: 'El mejor gana, siempre.' },
+  { sender: 'ThunderBolt', text: 'Vamos a por todas!' },
+  { sender: 'DarkPhoenix', text: 'Primera vez, pero no seré el último.' },
+  { sender: 'CrimsonBlade', text: 'La defensa gana campeonatos.' },
+  { sender: 'ShadowMind', text: '...' },
+  { sender: 'NovaCaptain', text: 'Atacamos o esperamos?' },
+  { sender: 'FrostWarden', text: 'Silencio antes de la tormenta.' },
 ];
 
 @Component({
@@ -52,7 +53,7 @@ const PHRASES: { sender: string; text: string }[] = [
           <div class="lobby-back-row">
             <a routerLink="/" class="back-btn" title="Volver al inicio">← Salas</a>
             <span class="lobby-mode-pill">{{ lobby()!.mode }}</span>
-            <span class="lobby-lock" *ngIf="lobby()!.hasPassword" title="Sala privada">🔒</span>
+            <span class="lobby-lock" *ngIf="lobby()!.hasPassword" title="Sala con código">🔒</span>
           </div>
           <h2>{{ lobby()!.name }}</h2>
           <div class="lobby-sub-info">
@@ -69,8 +70,11 @@ const PHRASES: { sender: string; text: string }[] = [
           <button class="btn btn-share" (click)="shareLobby()" title="Compartir enlace de la sala">
             📋 COMPARTIR
           </button>
-          <button class="btn btn-danger-link" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
+          <button class="btn btn-danger" *ngIf="isHost()" (click)="showDeleteModal.set(true)">
             🗑 BORRAR SALA
+          </button>
+          <button class="btn btn-danger" *ngIf="!isHost()" (click)="leaveLobby()">
+            🚪 SALIR
           </button>
           <button class="btn" [class.btn-primary]="!isReady()" [class.btn-secondary]="isReady()" (click)="toggleReady()">
             <span *ngIf="!isReady()">✔ ESTOY LISTO</span>
@@ -118,8 +122,8 @@ const PHRASES: { sender: string; text: string }[] = [
               [class.player-ready]="p.status === 'Ready'"
               [class.player-me]="p.name === myName()">
 
-              <div class="player-avatar" [style.background]="p.avatarColor">
-                {{ p.name.charAt(0).toUpperCase() }}
+              <div class="player-avatar" [style.background]="p.avatarImage ? 'url(' + p.avatarImage + ') center/cover' : p.avatarColor">
+                <span *ngIf="!p.avatarImage">{{ p.name.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="player-details">
                 <div class="player-name-row">
@@ -127,7 +131,7 @@ const PHRASES: { sender: string; text: string }[] = [
                   <span class="owner-crown" *ngIf="p.isOwner" title="Host">👑</span>
                   <span class="me-tag" *ngIf="p.name === myName()">TÚ</span>
                 </div>
-                <span class="player-clan" *ngIf="p.clan">[{{ p.clan }}]</span>
+                <span class="player-clan" *ngIf="p.clan"><span *ngIf="p.clanTag">[{{ p.clanTag }}] </span>{{ p.clan }}</span>
               </div>
               <div class="player-status-dot" [class.ready]="p.status === 'Ready'" [title]="p.status">
                 <span class="status-text">{{ p.status }}</span>
@@ -166,6 +170,16 @@ const PHRASES: { sender: string; text: string }[] = [
             <button type="submit" class="btn btn-primary btn-sm" [disabled]="!auth.isLoggedIn()">Enviar</button>
           </form>
         </div>
+      </div>
+    </div>
+
+    <!-- START COUNTDOWN OVERLAY -->
+    <div class="countdown-overlay animate-fade-in" *ngIf="isFullReady() && countdown() > 0">
+      <div class="countdown-card glass-panel animate-zoom">
+        <div class="war-icon">⚡</div>
+        <span class="countdown-msg">¡TODOS LISTOS!</span>
+        <h1 class="countdown-num">{{ countdown() }}</h1>
+        <p class="countdown-sub">Preparando despliegue estratégico...</p>
       </div>
     </div>
   `,
@@ -312,21 +326,9 @@ const PHRASES: { sender: string; text: string }[] = [
       background: rgba(0,0,0,0.15);
     }
 
-    /* Modal Styles (extracted for consistency) */
-    .modal-overlay {
-      position: fixed; inset: 0; z-index: 2000;
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-    }
-    .modal-panel {
-      width: 100%; max-width: 440px;
-      background: rgba(15, 20, 35, 0.95);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 24px; border-radius: 16px;
-    }
     @keyframes slideInModal {
       from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 1; transform: none; }
     }
     .animate-modal { animation: slideInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     .modal-header { display: flex; align-items: flex-start; margin-bottom: 20px; }
@@ -345,16 +347,24 @@ const PHRASES: { sender: string; text: string }[] = [
 
     @media (max-width: 768px) {
       .lobby-grid { grid-template-columns: 1fr; }
-      .lobby-header { flex-direction: column; }
+      .lobby-header { flex-direction: column; align-items: stretch; gap: 16px; }
+      .lobby-action { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 12px; 
+      }
+      .lobby-action .btn { width: 100%; justify-content: center; }
+      .lobby-action .btn-danger-link { grid-column: span 2; }
     }
   `]
 })
 export class Lobby implements OnInit, OnDestroy {
-  private route         = inject(ActivatedRoute);
-  private lobbyService  = inject(LobbyService);
-  readonly auth         = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private lobbyService = inject(LobbyService);
+  readonly auth = inject(AuthService);
+  private profanity = inject(ProfanityService);
 
-  lobby   = signal<LobbyEntry | null>(null);
+  lobby = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
   isReady = signal(false);
   showDeleteModal = signal(false);
@@ -365,7 +375,7 @@ export class Lobby implements OnInit, OnDestroy {
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
-  
+
   isHost = computed(() => {
     const l = this.lobby();
     return l ? l.host === this.myName() : false;
@@ -383,6 +393,25 @@ export class Lobby implements OnInit, OnDestroy {
     const free = l.maxPlayers - l.playerList.length;
     return Array(Math.max(0, free)).fill(null);
   });
+
+  readonly isFullReady = computed(() => {
+    const l = this.lobby();
+    if (!l || l.playerList.length < 2) return false;
+    return l.playerList.every(p => p.status === 'Ready');
+  });
+
+  countdown = signal(5);
+  private countdownInterval: any = null;
+
+  constructor() {
+    effect(() => {
+      if (this.isFullReady()) {
+        this.startCountdown();
+      } else {
+        this.stopCountdown();
+      }
+    });
+  }
 
   ngOnInit() {
     // Auth guard: block if not logged in
@@ -410,6 +439,12 @@ export class Lobby implements OnInit, OnDestroy {
       }
     } else {
       this.lobby.set(found);
+    }
+
+    // Sync isReady state if already in lobby
+    const me = this.lobby()?.playerList.find(p => p.name === this.myName());
+    if (me) {
+      this.isReady.set(me.status === 'Ready');
     }
 
     const currentLobby = this.lobby()!;
@@ -452,9 +487,12 @@ export class Lobby implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.timers.forEach(t => clearTimeout(t));
-    const current = this.lobby();
-    if (current) {
-      this.lobbyService.leaveLobby(current.id);
+    this.stopCountdown();
+
+    // If the user navigates away while ready, cancel their ready state
+    // so the countdown stops for everyone.
+    if (this.isReady()) {
+      this.toggleReady();
     }
   }
 
@@ -471,10 +509,18 @@ export class Lobby implements OnInit, OnDestroy {
     );
   }
 
+  leaveLobby() {
+    const l = this.lobby();
+    if (l) {
+      this.lobbyService.leaveLobby(l.id);
+      this.router.navigate(['/']);
+    }
+  }
+
   confirmDelete() {
     const l = this.lobby();
     if (!l) return;
-    
+
     this.lobbyService.deleteLobby(l.id);
     this.showDeleteModal.set(false);
     this.router.navigate(['/']);
@@ -490,7 +536,9 @@ export class Lobby implements OnInit, OnDestroy {
     if (!this.auth.isLoggedIn()) return;
     const text = this.chatInput.trim();
     if (!text) return;
-    this.addMsg(this.myName(), text);
+
+    const filtered = this.profanity.filterText(text);
+    this.addMsg(this.myName(), filtered);
     this.chatInput = '';
     this.scrollChat();
   }
@@ -520,7 +568,7 @@ export class Lobby implements OnInit, OnDestroy {
 
   private now(): string {
     const d = new Date();
-    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   }
 
   private scrollChat() {
@@ -528,5 +576,35 @@ export class Lobby implements OnInit, OnDestroy {
       const box = document.getElementById('chatBox');
       if (box) box.scrollTop = box.scrollHeight;
     }, 50);
+  }
+
+  private startCountdown() {
+    if (this.countdownInterval) return;
+    
+    this.countdownInterval = setInterval(() => {
+      const startTime = this.lobby()?.startReadyTime;
+      if (!startTime) {
+        this.stopCountdown();
+        return;
+      }
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 5 - elapsed);
+      
+      this.countdown.set(remaining);
+
+      if (remaining <= 0) {
+        this.stopCountdown();
+        this.addSystem('¡LA GUERRA COMIENZA AHORA!');
+      }
+    }, 500); // Check more frequently for better sync
+  }
+
+  private stopCountdown() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    this.countdown.set(5);
   }
 }
