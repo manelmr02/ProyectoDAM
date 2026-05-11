@@ -132,6 +132,19 @@ const PHRASES: { sender: string; text: string }[] = [
                   <span class="me-tag" *ngIf="p.name === myName()">TÚ</span>
                 </div>
                 <span class="player-clan" *ngIf="p.clan"><span *ngIf="p.clanTag">[{{ p.clanTag }}] </span>{{ p.clan }}</span>
+                <div class="player-region-row" style="display:flex; align-items:center; gap:8px;">
+                  <span class="player-region" style="font-size: 0.7rem; color: var(--accent-secondary); font-weight: 700;">{{ p.faction || 'Sin Región' }}</span>
+                  <span class="region-level" style="background: rgba(200,170,110,0.2); color: var(--accent-gold); font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; font-weight: 800;">NV. {{ p.regionLevel || 1 }}</span>
+                  
+                  <!-- Switch faction if me -->
+                  <select 
+                    *ngIf="p.name === myName()" 
+                    style="background: rgba(0,0,0,0.4); color: white; border: 1px solid var(--border-light); font-size: 0.65rem; padding: 0 4px; border-radius: 4px; outline: none;"
+                    [ngModel]="p.faction"
+                    (ngModelChange)="changeFaction($event)">
+                    <option *ngFor="let f of regions" [value]="f">{{ f }}</option>
+                  </select>
+                </div>
               </div>
               <div class="player-status-dot" [class.ready]="p.status === 'Ready'" [title]="p.status">
                 <span class="status-text">{{ p.status }}</span>
@@ -372,6 +385,9 @@ export class Lobby implements OnInit, OnDestroy {
   notAuthenticated = signal(false);
   chatInput = '';
 
+  regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'The Void'];
+
+
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
@@ -580,7 +596,7 @@ export class Lobby implements OnInit, OnDestroy {
 
   private startCountdown() {
     if (this.countdownInterval) return;
-    
+
     this.countdownInterval = setInterval(() => {
       const startTime = this.lobby()?.startReadyTime;
       if (!startTime) {
@@ -590,7 +606,7 @@ export class Lobby implements OnInit, OnDestroy {
 
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remaining = Math.max(0, 5 - elapsed);
-      
+
       this.countdown.set(remaining);
 
       if (remaining <= 0) {
@@ -606,5 +622,17 @@ export class Lobby implements OnInit, OnDestroy {
       this.countdownInterval = null;
     }
     this.countdown.set(5);
+  }
+
+  changeFaction(newFaction: string) {
+    const l = this.lobby();
+    if (!l) return;
+    const user = this.auth.currentUser();
+    if (!user) return;
+    
+    const level = user.regionalLevels?.[newFaction] || 1;
+    this.lobbyService.changePlayerFaction(l.id, this.myName(), newFaction, level);
+    this.lobby.set(this.lobbyService.getLobbyById(l.id) ?? null);
+    this.addSystem(`${this.myName()} ha cambiado su región a ${newFaction}.`);
   }
 }

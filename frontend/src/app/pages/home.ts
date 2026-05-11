@@ -158,11 +158,11 @@ import { AuthService } from '../services/auth.service';
       <h2>Noticias de Runaterra</h2>
       <div class="news-grid">
         <div class="news-card glass-panel hover-scale">
-          <div class="news-image bg-patch"></div>
+          <div class="news-image" style="background-image: url('news_factions.png');"></div>
           <div class="news-content">
-            <div class="news-tag patch">Notas del Parche</div>
-            <h4>Facciones al Límite</h4>
-            <p>Las últimas defensas están cediendo, las estrategias agresivas dominan el meta actual.</p>
+            <div class="news-tag event">Geopolítica</div>
+            <h4>Regiones en Conflicto</h4>
+            <p>Noxus expande sus fronteras mientras Demacia refuerza su vigilancia. Jonia permanece en un equilibrio precario.</p>
           </div>
         </div>
         <div class="news-card glass-panel hover-scale">
@@ -327,8 +327,13 @@ import { AuthService } from '../services/auth.service';
             <label for="mode">Modo de Juego</label>
             <select id="mode" class="mform-control" name="mode" [(ngModel)]="draft.mode">
               <option value="SoloQ">SoloQ</option>
-              <option value="Clash">Clash</option>
-              <option value="ARAM">ARAM</option>
+              <option value="DuoQ">DuoQ</option>
+            </select>
+          </div>
+          <div class="mform-group">
+            <label for="faction">Tu Región</label>
+            <select id="faction" class="mform-control" name="faction" [(ngModel)]="draft.faction">
+              <option *ngFor="let reg of regions" [value]="reg">{{ reg }}</option>
             </select>
           </div>
         </div>
@@ -480,6 +485,9 @@ export class Home {
   readonly auth = inject(AuthService);
   private router = inject(Router);
 
+  regions = ["Demacia", "Noxus", "Ionia", "Freljord", "Piltover", "Zaun", "Shurima", "Shadow Isles", "Targon", "Bilgewater", "Ixtal", "The Void"];
+
+
   searchQuery = '';
   showLoginRequired = signal(false);
   showModal = signal(false);
@@ -497,8 +505,8 @@ export class Home {
 
   draft = this.emptyDraft();
 
-  private emptyDraft(): CreateLobbyDto {
-    return { name: '', description: '', maxPlayers: 10, mode: 'SoloQ', hasPassword: false, password: '' };
+  private emptyDraft() {
+    return { name: '', description: '', maxPlayers: 10, mode: 'SoloQ', hasPassword: false, password: '', faction: 'Demacia' };
   }
 
   filteredLobbies() {
