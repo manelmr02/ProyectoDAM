@@ -10,15 +10,15 @@ interface ChatMessage { sender?: string; text: string; time: string; system?: bo
 
 // NPC phrases for random chat simulation
 const PHRASES: { sender: string; text: string }[] = [
-  { sender: 'ComandanteRex', text: 'Prepárense para caer.' },
-  { sender: 'NightStalker', text: 'Esta vez no habrá piedad.' },
-  { sender: 'IronFalcon', text: '¿Alguien tiene estrategia?' },
-  { sender: 'GhostReaper', text: 'El mejor gana, siempre.' },
-  { sender: 'ThunderBolt', text: 'Vamos a por todas!' },
+  { sender: 'YasuoMain', text: 'La muerte es como el viento...' },
+  { sender: 'GarenGamer', text: '¡Por Demacia!' },
+  { sender: 'JinxEnjoyer', text: '¡Reglas hechas para romperse!' },
+  { sender: 'TeemoGod', text: 'Tamaño no lo es todo.' },
+  { sender: 'ZedPlayer', text: 'Las sombras me iluminan.' },
   { sender: 'DarkPhoenix', text: 'Primera vez, pero no seré el último.' },
-  { sender: 'CrimsonBlade', text: 'La defensa gana campeonatos.' },
+  { sender: 'AhriFan', text: '¿No confías en mí?' },
   { sender: 'ShadowMind', text: '...' },
-  { sender: 'NovaCaptain', text: 'Atacamos o esperamos?' },
+  { sender: 'NovaCaptain', text: '¿Invadimos o esperamos?' },
   { sender: 'FrostWarden', text: 'Silencio antes de la tormenta.' },
 ];
 
@@ -112,7 +112,7 @@ const PHRASES: { sender: string; text: string }[] = [
 
         <!-- Player list -->
         <div class="players-panel glass-panel">
-          <h3>Retadores Conectados <span class="player-badge">{{ lobby()!.playerList.length }}/{{ lobby()!.maxPlayers }}</span></h3>
+          <h3>Invocadores en la Sala <span class="player-badge">{{ lobby()!.playerList.length }}/{{ lobby()!.maxPlayers }}</span></h3>
 
           <!-- Occupied slots -->
           <div class="player-list">
@@ -150,7 +150,7 @@ const PHRASES: { sender: string; text: string }[] = [
 
         <!-- Chat -->
         <div class="chat-panel glass-panel">
-          <h3>Comunicaciones Tácticas</h3>
+          <h3>Chat de Grupo</h3>
           <div class="chat-messages" #chatBox id="chatBox">
             <div class="msg" *ngFor="let msg of messages()" [class.system-msg]="msg.system" [class.my-msg]="msg.sender === myName()">
               <span class="msg-time">[{{ msg.time }}]</span>
@@ -179,7 +179,7 @@ const PHRASES: { sender: string; text: string }[] = [
         <div class="war-icon">⚡</div>
         <span class="countdown-msg">¡TODOS LISTOS!</span>
         <h1 class="countdown-num">{{ countdown() }}</h1>
-        <p class="countdown-sub">Preparando despliegue estratégico...</p>
+        <p class="countdown-sub">Buscando partida...</p>
       </div>
     </div>
   `,
@@ -595,7 +595,7 @@ export class Lobby implements OnInit, OnDestroy {
 
       if (remaining <= 0) {
         this.stopCountdown();
-        this.addSystem('¡LA GUERRA COMIENZA AHORA!');
+        this.addSystem('¡BIENVENIDOS A LA GRIETA DEL INVOCADOR!');
       }
     }, 500); // Check more frequently for better sync
   }

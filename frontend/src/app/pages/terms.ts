@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
         <div class="legal-body">
           <section>
             <h2>1. Aceptación de los Términos</h2>
-            <p>Al acceder y utilizar Payload Strategic Strike, aceptas cumplir y estar sujeto a estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no podrás utilizar nuestra plataforma.</p>
+            <p>Al acceder y utilizar Runeterra Tactics Strategic Strike, aceptas cumplir y estar sujeto a estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no podrás utilizar nuestra plataforma.</p>
           </section>
 
           <section>
@@ -33,7 +33,7 @@ import { RouterLink } from '@angular/router';
 
           <section>
             <h2>4. Propiedad Intelectual</h2>
-            <p>Todo el contenido de Payload Strategic Strike, incluyendo gráficos, código y diseño, es propiedad del proyecto DAM o de sus respectivos licenciantes.</p>
+            <p>Todo el contenido de Runeterra Tactics Strategic Strike, incluyendo gráficos, código y diseño, es propiedad del proyecto DAM o de sus respectivos licenciantes.</p>
           </section>
 
           <section>

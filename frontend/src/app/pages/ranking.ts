@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
     <div class="ranking-container animate-fade-in">
       <div class="glass-panel text-center">
         <h2>Clasificación Global</h2>
-        <p class="text-muted">Los mejores estrategas de Payload</p>
+        <p class="text-muted">Los mejores Challengers de Runaterra</p>
       </div>
 
       <div class="ranking-board glass-panel">
@@ -16,11 +16,11 @@ import { CommonModule } from '@angular/common';
           <thead>
             <tr>
               <th>#</th>
-              <th>Jugador</th>
-              <th>Elo</th>
-              <th class="hide-mobile">Ataques ⚔️</th>
-              <th class="hide-mobile">Defensas 🛡️</th>
-              <th class="hide-mobile">Ratio</th>
+              <th>Invocador</th>
+              <th>LP (Elo)</th>
+              <th class="hide-mobile">Kills ⚔️</th>
+              <th class="hide-mobile">Asistencias 🛡️</th>
+              <th class="hide-mobile">Winrate</th>
             </tr>
           </thead>
           <tbody>
@@ -79,10 +79,10 @@ import { CommonModule } from '@angular/common';
 })
 export class Ranking {
   topPlayers = [
-    { name: 'FakerEstratega', clan: 'Alba', elo: 2400, attacks: 150, defenses: 80, ratio: 75 },
-    { name: 'Muro_Infranqueable', clan: 'Defensores', elo: 2250, attacks: 40, defenses: 200, ratio: 68 },
-    { name: 'ShadowNinja', clan: 'Ninjas Oscuros', elo: 2100, attacks: 180, defenses: 20, ratio: 62 },
-    { name: 'X_Destroyer_X', clan: '', elo: 1950, attacks: 110, defenses: 40, ratio: 55 },
-    { name: 'ElProfeta', clan: 'Visionarios', elo: 1900, attacks: 60, defenses: 90, ratio: 58 }
+    { name: 'FakerEstratega', clan: 'T1', elo: 2400, attacks: 1500, defenses: 800, ratio: 75 },
+    { name: 'Chovy_Mid', clan: 'GEN', elo: 2250, attacks: 1400, defenses: 900, ratio: 68 },
+    { name: 'ShowMaker', clan: 'DK', elo: 2100, attacks: 1300, defenses: 850, ratio: 62 },
+    { name: 'Caps_G2', clan: 'G2', elo: 1950, attacks: 1100, defenses: 740, ratio: 55 },
+    { name: 'Doinb_Mago', clan: 'FPX', elo: 1900, attacks: 960, defenses: 990, ratio: 58 }
   ];
 }

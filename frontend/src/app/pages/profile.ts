@@ -37,7 +37,7 @@ import { ClanService } from '../services/clan.service';
             </div>
             <div class="profile-meta-row">
               <span class="meta-chip faction-chip">
-                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Facción' }}
+                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Región' }}
               </span>
               <span class="meta-chip">
                 <span class="chip-icon">📧</span> {{ user()!.email }}
@@ -46,7 +46,7 @@ import { ClanService } from '../services/clan.service';
                 <span class="chip-icon">📅</span> Desde {{ joinDate() }}
               </span>
             </div>
-            <p class="profile-bio">{{ user()!.bio || '¡Listo para la batalla!' }}</p>
+            <p class="profile-bio">{{ user()!.bio || '¡Nos vemos en la Grieta!' }}</p>
           </div>
 
           <button class="btn btn-secondary btn-edit" (click)="toggleEdit()">
@@ -75,7 +75,7 @@ import { ClanService } from '../services/clan.service';
             </div>
 
             <div class="form-group">
-              <label>Rango de Combate</label>
+              <label>Liga / División</label>
               <div class="rank-display">
                 <span class="rank-icon">🎖️</span>
                 <span class="rank-name">{{ combatRank() }}</span>
@@ -141,7 +141,7 @@ import { ClanService } from '../services/clan.service';
 
       <!-- ═══════════ STATS GRID ═══════════ -->
       <div class="stats-section">
-        <h2 class="section-title"><span class="title-accent">|</span> Estadísticas de Combate</h2>
+        <h2 class="section-title"><span class="title-accent">|</span> Estadísticas de Temporada</h2>
 
         <div class="stats-grid">
           <div class="stat-card glass-panel">
@@ -247,7 +247,7 @@ import { ClanService } from '../services/clan.service';
       <div class="glass-panel" style="text-align:center; padding: 60px 40px; max-width: 480px; margin: 60px auto;">
         <div style="font-size: 3rem; margin-bottom: 16px;">🔒</div>
         <h2>Acceso Requerido</h2>
-        <p class="text-muted" style="margin: 12px 0 24px;">Inicia sesión para ver tu perfil de comandante.</p>
+        <p class="text-muted" style="margin: 12px 0 24px;">Inicia sesión para ver tu perfil de invocador.</p>
         <a routerLink="/login" class="btn btn-primary" style="padding: 14px 32px;">🛡 INICIAR SESIÓN</a>
       </div>
     </div>
@@ -549,12 +549,12 @@ export class Profile implements OnInit {
 
   combatRank = computed(() => {
     const wins = this.stats().wins;
-    if (wins >= 101) return 'Leyenda del Campo de Batalla';
-    if (wins >= 51)  return 'General de Brigada';
-    if (wins >= 31)  return 'Comandante de Campo';
-    if (wins >= 16)  return 'Sargento Táctico';
-    if (wins >= 6)   return 'Soldado de Élite';
-    return 'Recluta Novato';
+    if (wins >= 101) return 'Challenger';
+    if (wins >= 51)  return 'Gran Maestro';
+    if (wins >= 31)  return 'Diamante';
+    if (wins >= 16)  return 'Platino';
+    if (wins >= 6)   return 'Oro';
+    return 'Hierro';
   });
 
   avatarGradient = computed(() => {
@@ -601,9 +601,9 @@ export class Profile implements OnInit {
   };
 
   availableTitles = [
-    'Recluta Novato', 'Estratega Aprendiz', 'Comandante en Prácticas',
-    'Soldado Raso', 'Centinela', 'Táctico Junior',
-    'Maestro de Campo', 'Élite Oscura', 'General Supremo',
+    'Hierro', 'Bronce', 'Plata',
+    'Oro', 'Platino', 'Esmeralda',
+    'Diamante', 'Maestro', 'Challenger',
   ];
 
   availableColors = [
@@ -621,7 +621,7 @@ export class Profile implements OnInit {
 
     this.draft = {
       bio: migrated.bio || '',
-      title: migrated.title || 'Recluta Novato',
+      title: migrated.title || 'Hierro',
       clan: migrated.clan || '',
       clanTag: migrated.clanTag || '',
       avatarColor: migrated.avatarColor || '#8b5cf6',
@@ -636,7 +636,7 @@ export class Profile implements OnInit {
       const u = this.user()!;
       this.draft = {
         bio: u.bio || '',
-        title: u.title || 'Recluta Novato',
+        title: u.title || 'Hierro',
         clan: u.clan || '',
         clanTag: u.clanTag || '',
         avatarColor: u.avatarColor || '#8b5cf6',

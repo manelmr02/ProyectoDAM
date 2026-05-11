@@ -10,8 +10,8 @@ import { AuthService } from '../services/auth.service';
   template: `
     <div class="battle-container animate-fade-in">
       <div class="battle-header glass-panel">
-        <h1>⚔️ COMBATE EN CURSO ⚔️</h1>
-        <p class="subtitle">Sala #{{ lobbyId }} - {{ lobbyName() }}</p>
+        <h1>⚔️ EN LA GRIETA ⚔️</h1>
+        <p class="subtitle">Partida #{{ lobbyId }} - {{ lobbyName() }}</p>
       </div>
 
       <div class="battle-arena glass-panel">
@@ -24,21 +24,21 @@ import { AuthService } from '../services/auth.service';
           <div class="vs">VS</div>
           <div class="player-side right">
             <div class="placeholder-avatar">🔥</div>
-            <div class="name">Rival Desconocido</div>
+            <div class="name">Invocador Enemigo</div>
             <div class="hp-bar"><div class="hp-fill" style="width: 100%"></div></div>
           </div>
         </div>
         
         <div class="battle-log">
-          <div class="log-entry system">¡El combate ha comenzado!</div>
-          <div class="log-entry">Estás analizando la estrategia del enemigo...</div>
-          <div class="log-entry warning">El enemigo parece estar preparando un ataque masivo.</div>
+          <div class="log-entry system">¡Bienvenidos a la Grieta del Invocador!</div>
+          <div class="log-entry">Estás comprando ítems iniciales y dirigiéndote a línea...</div>
+          <div class="log-entry warning">El equipo enemigo está preparándose para hacer el Dragón.</div>
         </div>
 
         <div class="battle-actions">
-          <button class="btn btn-primary">ATACAR</button>
-          <button class="btn btn-secondary">DEFENDER</button>
-          <button class="btn btn-danger-outline" routerLink="/">RETIRADA</button>
+          <button class="btn btn-primary">INICIAR TEAMFIGHT</button>
+          <button class="btn btn-secondary">DEFENDER NEXO</button>
+          <button class="btn btn-danger-outline" routerLink="/">SURRENDER (FF)</button>
         </div>
       </div>
     </div>
@@ -82,6 +82,6 @@ export class Battle implements OnInit {
     if (lobby) {
       this.lobbyName.set(lobby.name);
     }
-    this.playerName.set(this.auth.currentUser()?.username ?? 'Héroe');
+    this.playerName.set(this.auth.currentUser()?.username ?? 'Invocador');
   }
 }

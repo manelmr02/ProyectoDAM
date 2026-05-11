@@ -15,14 +15,14 @@ import { AuthService } from '../services/auth.service';
     <!-- ═══════════════ HERO ═══════════════ -->
     <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
                         <div class="hero-content">
-        <span class="badge">Fase de Preparación Activa</span>
-        <h1>Estrategia a <span class="highlight-gradient">Ciegas</span></h1>
-        <p class="subtitle">Decide el destino de tu facción. Ataca a tus rivales o asegura tus defensas sin saber cuál será el próximo movimiento de tus enemigos en este enfrentamiento todos contra todos.</p>
+        <span class="badge">Fase de Selección y Bloqueos</span>
+        <h1>Domina la <span class="highlight-gradient">Grieta</span></h1>
+        <p class="subtitle">Elige a tu campeón, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
 
         <div class="action-panel glass-panel">
           <div class="action-panel-header">
-            <h3>¿Listo para el combate?</h3>
-            <p>Configura tu sala y lidera a tu facción a la victoria.</p>
+            <h3>¿Listo para la batalla?</h3>
+            <p>Configura tu sala y lidera a tu equipo a la victoria.</p>
           </div>
           <div class="action-buttons">
             <button class="btn btn-primary play-btn" (click)="openModal()">
@@ -41,7 +41,7 @@ import { AuthService } from '../services/auth.service';
         <div class="champion-card glass-panel">
           <div class="card-image-placeholder"></div>
           <div class="card-info">
-            <h3>Atacar o Defender</h3>
+            <h3>Fijar o Banear</h3>
             <span class="rolemage">Anticipa a tus enemigos</span>
           </div>
         </div>
@@ -155,30 +155,30 @@ import { AuthService } from '../services/auth.service';
 
     <!-- ═══════════════ NEWS ═══════════════ -->
     <section class="news-section animate-fade-in" style="animation-delay: 0.5s; margin: 24px 0;">
-      <h2>Inteligencia de Combate</h2>
+      <h2>Noticias de Runaterra</h2>
       <div class="news-grid">
         <div class="news-card glass-panel hover-scale">
           <div class="news-image bg-patch"></div>
           <div class="news-content">
-            <div class="news-tag patch">Reporte</div>
+            <div class="news-tag patch">Notas del Parche</div>
             <h4>Facciones al Límite</h4>
-            <p>Las últimas defensas están cediendo, las estrategias agresivas dominan el meta.</p>
+            <p>Las últimas defensas están cediendo, las estrategias agresivas dominan el meta actual.</p>
           </div>
         </div>
         <div class="news-card glass-panel hover-scale">
           <div class="news-image bg-event"></div>
           <div class="news-content">
-            <div class="news-tag event">Recursos</div>
+            <div class="news-tag event">PBE</div>
             <h4>Mejora de Defensas</h4>
-            <p>Los escudos de facción tendrán una penalización reducida por predicciones erróneas.</p>
+            <p>Los escudos Hextech tendrán una penalización reducida en el próximo parche.</p>
           </div>
         </div>
         <div class="news-card glass-panel hover-scale">
           <div class="news-image bg-esports"></div>
           <div class="news-content">
-            <div class="news-tag esports">Top Jugadores</div>
-            <h4>Los Maestros del Engaño</h4>
-            <p>Repasamos el Top 10 de jugadores globales que han anticipado ataques enemigos de forma constante.</p>
+            <div class="news-tag esports">Challengers</div>
+            <h4>Challengers de SoloQ</h4>
+            <p>Repasamos el Top 10 de jugadores globales que han alcanzado el rango de Challenger esta temporada.</p>
           </div>
         </div>
       </div>
@@ -288,7 +288,7 @@ import { AuthService } from '../services/auth.service';
           <span class="modal-icon">⚔</span>
           <div>
             <h2 class="modal-title">Crear Partida</h2>
-            <p class="modal-subtitle">Configura los parámetros de tu sala de combate</p>
+            <p class="modal-subtitle">Configura los parámetros de tu partida en la Grieta</p>
           </div>
         </div>
         <button class="modal-close" (click)="closeModal()">✕</button>
@@ -326,9 +326,9 @@ import { AuthService } from '../services/auth.service';
           <div class="mform-group">
             <label for="mode">Modo de Juego</label>
             <select id="mode" class="mform-control" name="mode" [(ngModel)]="draft.mode">
-              <option value="Todos contra Todos">Todos contra Todos</option>
-              <option value="Por Equipos">Por Equipos</option>
-              <option value="Eliminación">Eliminación</option>
+              <option value="SoloQ">SoloQ</option>
+              <option value="Clash">Clash</option>
+              <option value="ARAM">ARAM</option>
             </select>
           </div>
         </div>
@@ -498,7 +498,7 @@ export class Home {
   draft = this.emptyDraft();
 
   private emptyDraft(): CreateLobbyDto {
-    return { name: '', description: '', maxPlayers: 10, mode: 'Todos contra Todos', hasPassword: false, password: '' };
+    return { name: '', description: '', maxPlayers: 10, mode: 'SoloQ', hasPassword: false, password: '' };
   }
 
   filteredLobbies() {

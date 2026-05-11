@@ -28,7 +28,7 @@ import { RouterLink } from '@angular/router';
 
           <section>
             <h2>3. Almacenamiento Local</h2>
-            <p>Payload Strategic Strike utiliza el almacenamiento local de tu navegador (localStorage) para mantener tu sesión activa y guardar preferencias locales. No utilizamos cookies de rastreo de terceros.</p>
+            <p>Runeterra Tactics Strategic Strike utiliza el almacenamiento local de tu navegador (localStorage) para mantener tu sesión activa y guardar preferencias locales. No utilizamos cookies de rastreo de terceros.</p>
           </section>
 
           <section>
