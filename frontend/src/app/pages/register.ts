@@ -13,8 +13,8 @@ import { AuthService } from '../services/auth.service';
       <div class="glass-panel auth-panel">
 
         <div class="auth-logo">⚔</div>
-        <h2>Registro de Comandante</h2>
-        <p class="text-muted">Recluta tu división y únete al conflicto</p>
+        <h2>Registro de Invocador</h2>
+        <p class="text-muted">Crea tu cuenta y únete a la Grieta</p>
 
         <!-- Success banner -->
         <div class="alert alert-success" *ngIf="successMsg()">
@@ -35,7 +35,7 @@ import { AuthService } from '../services/auth.service';
               type="text"
               class="form-control"
               [class.invalid]="usernameInput.invalid && usernameInput.touched"
-              placeholder="Tu alias en el campo de batalla"
+              placeholder="Tu alias de invocador"
               name="username"
               [(ngModel)]="form.username"
               #usernameInput="ngModel"
@@ -51,12 +51,12 @@ import { AuthService } from '../services/auth.service';
           </div>
 
           <div class="form-group">
-            <label for="reg-clan">Clan <span class="optional">(Opcional)</span></label>
+            <label for="reg-clan">Club <span class="optional">(Opcional)</span></label>
             <input
               id="reg-clan"
               type="text"
               class="form-control"
-              placeholder="Ej: Los Vengadores del Alba"
+              placeholder="Ej: SKT T1"
               name="clan"
               [(ngModel)]="form.clan"
               maxlength="30">
@@ -142,7 +142,7 @@ import { AuthService } from '../services/auth.service';
         </form>
 
         <p class="auth-footer">
-          ¿Ya tienes una división activa? <a routerLink="/login">Inicia Sesión</a>
+          ¿Ya tienes una cuenta? <a routerLink="/login">Inicia Sesión</a>
         </p>
       </div>
     </div>

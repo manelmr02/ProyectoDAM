@@ -37,7 +37,7 @@ import { ClanService } from '../services/clan.service';
             </div>
             <div class="profile-meta-row">
               <span class="meta-chip faction-chip">
-                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Facción' }}
+                <span class="chip-icon">⚔</span> <span *ngIf="user()!.clanTag">[{{ user()!.clanTag }}] </span>{{ user()!.clan || user()!.faction || 'Sin Región' }}
               </span>
               <span class="meta-chip">
                 <span class="chip-icon">📧</span> {{ user()!.email }}
@@ -46,7 +46,7 @@ import { ClanService } from '../services/clan.service';
                 <span class="chip-icon">📅</span> Desde {{ joinDate() }}
               </span>
             </div>
-            <p class="profile-bio">{{ user()!.bio || '¡Listo para la batalla!' }}</p>
+            <p class="profile-bio">{{ user()!.bio || '¡Nos vemos en la Grieta!' }}</p>
           </div>
 
           <button class="btn btn-secondary btn-edit" (click)="toggleEdit()">
@@ -57,6 +57,21 @@ import { ClanService } from '../services/clan.service';
 
         <div class="banner-feedback" *ngIf="saveMsg() && !editing()">
           <span class="save-icon">✅</span> {{ saveMsg() }}
+        </div>
+      </div>
+
+      <!-- ═══════════ REGIONAL LEVELS ═══════════ -->
+      <div class="regional-section glass-panel">
+        <h2 class="section-title"><span class="title-accent">|</span> Dominio de Regiones</h2>
+        <div class="regional-grid">
+          <div class="regional-card" *ngFor="let reg of regionsList()">
+            <div class="reg-name">{{ reg.name }}</div>
+            <div class="reg-level">Nivel {{ reg.level }}</div>
+            <div class="reg-progress-bar">
+              <div class="reg-progress-fill" [style.width.%]="(reg.level % 10) * 10 || 100"></div>
+            </div>
+            <div class="reg-advantage">{{ reg.advantage }}</div>
+          </div>
         </div>
       </div>
 
@@ -75,7 +90,15 @@ import { ClanService } from '../services/clan.service';
             </div>
 
             <div class="form-group">
-              <label>Rango de Combate</label>
+              <label for="edit-faction">Región Predeterminada</label>
+              <select id="edit-faction" class="form-control" [(ngModel)]="draft.defaultFaction" name="defaultFaction">
+                <option *ngFor="let f of availableFactions" [value]="f">{{ f }}</option>
+              </select>
+              <p class="form-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Aparecerás con esta región al unirte a salas.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Liga / División</label>
               <div class="rank-display">
                 <span class="rank-icon">🎖️</span>
                 <span class="rank-name">{{ combatRank() }}</span>
@@ -141,7 +164,7 @@ import { ClanService } from '../services/clan.service';
 
       <!-- ═══════════ STATS GRID ═══════════ -->
       <div class="stats-section">
-        <h2 class="section-title"><span class="title-accent">|</span> Estadísticas de Combate</h2>
+        <h2 class="section-title"><span class="title-accent">|</span> Estadísticas de Temporada</h2>
 
         <div class="stats-grid">
           <div class="stat-card glass-panel">
@@ -247,7 +270,7 @@ import { ClanService } from '../services/clan.service';
       <div class="glass-panel" style="text-align:center; padding: 60px 40px; max-width: 480px; margin: 60px auto;">
         <div style="font-size: 3rem; margin-bottom: 16px;">🔒</div>
         <h2>Acceso Requerido</h2>
-        <p class="text-muted" style="margin: 12px 0 24px;">Inicia sesión para ver tu perfil de comandante.</p>
+        <p class="text-muted" style="margin: 12px 0 24px;">Inicia sesión para ver tu perfil de invocador.</p>
         <a routerLink="/login" class="btn btn-primary" style="padding: 14px 32px;">🛡 INICIAR SESIÓN</a>
       </div>
     </div>
@@ -526,6 +549,20 @@ import { ClanService } from '../services/clan.service';
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .profile-username { font-size: 1.6rem; }
     }
+
+    /* Regional Styles */
+    .regional-section { padding: 24px; border-radius: 20px; margin-bottom: 28px; }
+    .regional-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-top: 10px; }
+    .regional-card { 
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); padding: 16px; border-radius: 12px;
+      display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s;
+    }
+    .regional-card:hover { transform: translateY(-4px); border-color: var(--accent-gold); }
+    .reg-name { font-weight: 800; color: var(--accent-gold); font-size: 0.9rem; }
+    .reg-level { font-size: 0.8rem; color: white; font-weight: 600; }
+    .reg-progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .reg-progress-fill { height: 100%; background: var(--accent-secondary); border-radius: 3px; }
+    .reg-advantage { font-size: 0.72rem; color: var(--text-muted); font-style: italic; line-height: 1.3; }
   `]
 })
 export class Profile implements OnInit {
@@ -549,12 +586,12 @@ export class Profile implements OnInit {
 
   combatRank = computed(() => {
     const wins = this.stats().wins;
-    if (wins >= 101) return 'Leyenda del Campo de Batalla';
-    if (wins >= 51)  return 'General de Brigada';
-    if (wins >= 31)  return 'Comandante de Campo';
-    if (wins >= 16)  return 'Sargento Táctico';
-    if (wins >= 6)   return 'Soldado de Élite';
-    return 'Recluta Novato';
+    if (wins >= 101) return 'Challenger';
+    if (wins >= 51)  return 'Gran Maestro';
+    if (wins >= 31)  return 'Diamante';
+    if (wins >= 16)  return 'Platino';
+    if (wins >= 6)   return 'Oro';
+    return 'Hierro';
   });
 
   avatarGradient = computed(() => {
@@ -598,12 +635,13 @@ export class Profile implements OnInit {
     clanTag: '',
     avatarColor: '',
     avatarImage: undefined as string | undefined,
+    defaultFaction: 'Demacia',
   };
 
   availableTitles = [
-    'Recluta Novato', 'Estratega Aprendiz', 'Comandante en Prácticas',
-    'Soldado Raso', 'Centinela', 'Táctico Junior',
-    'Maestro de Campo', 'Élite Oscura', 'General Supremo',
+    'Hierro', 'Bronce', 'Plata',
+    'Oro', 'Platino', 'Esmeralda',
+    'Diamante', 'Maestro', 'Challenger',
   ];
 
   availableColors = [
@@ -611,6 +649,34 @@ export class Profile implements OnInit {
     '#ef4444', '#ec4899', '#3b82f6', '#84cc16',
     '#14b8a6', '#a855f7', '#f97316', '#6366f1',
   ];
+
+  availableFactions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'The Void'];
+
+  factionAdvantages: Record<string, string> = {
+    'Demacia': 'Fuerza y Disciplina. (+10% Armadura en defensa).',
+    'Noxus': 'Conquista sin piedad. (+15% Ataque al invadir).',
+    'Ionia': 'Equilibrio espiritual. (+10% Generación de tropas).',
+    'Freljord': 'Resiliencia helada. (-20% Bajas por turno).',
+    'Piltover': 'Progreso tecnológico. (+10% Oro por conquista).',
+    'Zaun': 'Ambición química. (+5% Probabilidad de contraataque).',
+    'Shurima': 'Gloria del imperio. (+20% Tropas iniciales).',
+    'Shadow Isles': 'Niebla eterna. (+10% Evasión de ataques).',
+    'Targon': 'Ascensión estelar. (+50% Puntos de victoria).',
+    'Bilgewater': 'Saqueo marino. (+15% Recompensa por victoria).',
+    'Ixtal': 'Dominio elemental. (+10% Bonus en selva).',
+    'The Void': 'Hambre insaciable. (+15% Daño verdadero).',
+  };
+
+  regionsList = computed(() => {
+    const u = this.user();
+    if (!u) return [];
+    const levels = u.regionalLevels || {};
+    return this.availableFactions.map(f => ({
+      name: f,
+      level: levels[f] || 1,
+      advantage: this.factionAdvantages[f] || 'Sin bonus.'
+    }));
+  });
 
   ngOnInit() {
     const u = this.auth.currentUser();
@@ -621,11 +687,12 @@ export class Profile implements OnInit {
 
     this.draft = {
       bio: migrated.bio || '',
-      title: migrated.title || 'Recluta Novato',
+      title: migrated.title || 'Hierro',
       clan: migrated.clan || '',
       clanTag: migrated.clanTag || '',
       avatarColor: migrated.avatarColor || '#8b5cf6',
       avatarImage: migrated.avatarImage,
+      defaultFaction: migrated.defaultFaction || 'Demacia',
     };
   }
 
@@ -636,11 +703,12 @@ export class Profile implements OnInit {
       const u = this.user()!;
       this.draft = {
         bio: u.bio || '',
-        title: u.title || 'Recluta Novato',
+        title: u.title || 'Hierro',
         clan: u.clan || '',
         clanTag: u.clanTag || '',
         avatarColor: u.avatarColor || '#8b5cf6',
         avatarImage: u.avatarImage,
+        defaultFaction: u.defaultFaction || u.faction || 'Demacia',
       };
     }
   }
@@ -712,6 +780,8 @@ export class Profile implements OnInit {
       clanTag: this.draft.clanTag?.trim() || '',
       avatarColor: this.draft.avatarColor,
       avatarImage: this.draft.avatarImage,
+      defaultFaction: this.draft.defaultFaction,
+      faction: this.draft.defaultFaction,
     });
 
     if (result.ok) {

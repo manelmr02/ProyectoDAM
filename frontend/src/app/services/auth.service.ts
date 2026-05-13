@@ -25,7 +25,9 @@ export interface UserProfile {
   bio: string;
   title: string;
   faction: string;
+  defaultFaction?: string;
   clanTag?: string;
+  regionalLevels?: Record<string, number>;
   stats: UserStats;
 }
 
@@ -41,9 +43,9 @@ const TITLES = [
 ];
 
 const FACTIONS = [
-  'Legión de Fuego', 'Sombras del Norte', 'Cobra Roja',
-  'Águila de Hierro', 'Espectros', 'Trueno Azul',
-  'Ave Fénix', 'Nova Corps', 'Filo Carmesí',
+  'Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover',
+  'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater',
+  'Ixtal', 'The Void'
 ];
 
 function generateDefaultProfile(): Partial<UserProfile> {
@@ -52,6 +54,11 @@ function generateDefaultProfile(): Partial<UserProfile> {
     bio: '¡Listo para la batalla!',
     title: TITLES[Math.floor(Math.random() * TITLES.length)],
     faction: FACTIONS[Math.floor(Math.random() * FACTIONS.length)],
+    regionalLevels: {
+      'Demacia': 1, 'Noxus': 1, 'Ionia': 1, 'Freljord': 1, 'Piltover': 1,
+      'Zaun': 1, 'Shurima': 1, 'Shadow Isles': 1, 'Targon': 1, 'Bilgewater': 1,
+      'Ixtal': 1, 'The Void': 1
+    },
     stats: {
       wins: 0,
       losses: 0,

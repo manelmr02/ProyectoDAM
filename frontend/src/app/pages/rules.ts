@@ -11,8 +11,8 @@ import { RouterLink } from '@angular/router';
       <div class="glass-panel content-container">
         <header class="legal-header">
           <div class="icon-circle">⚔️</div>
-          <h1>Reglas de Combate</h1>
-          <p class="last-update">Manual del Comandante v1.0</p>
+          <h1>Reglas de la Grieta</h1>
+          <p class="last-update">Código del Invocador v1.0</p>
         </header>
 
         <div class="legal-body">
@@ -32,24 +32,24 @@ import { RouterLink } from '@angular/router';
             <div class="rule-card">
               <span class="rule-num">03</span>
               <h3>Objetivos</h3>
-              <p>El objetivo principal es neutralizar las fuerzas enemigas utilizando tácticas de posición y gestión de recursos. El último comandante en pie reclama la victoria.</p>
+              <p>El objetivo principal es neutralizar las fuerzas enemigas utilizando tácticas de posición y gestión de recursos. Destruir el Nexo enemigo te otorgará la victoria.</p>
             </div>
 
             <div class="rule-card">
               <span class="rule-num">04</span>
               <h3>Sistema de Rango</h3>
-              <p>Tu rango (Combat Title) evoluciona automáticamente con tus victorias. A más victorias, mayor será tu prestigio en la comunidad de Payload.</p>
+              <p>Tu Liga/División evoluciona automáticamente con tus victorias. A más victorias, mayor será tu prestigio en la comunidad de Runaterra.</p>
             </div>
           </div>
 
           <section class="fair-play">
             <h2>Juego Limpio (Fair Play)</h2>
-            <p>Payload Strategic Strike es una competición de habilidad. El uso de software externo para obtener ventaja resultará en la suspensión inmediata de la cuenta y la pérdida de todos los rangos obtenidos.</p>
+            <p>League of Legends Tactics es una competición de habilidad. El uso de scripts o software externo para obtener ventaja resultará en la suspensión inmediata de la cuenta y la pérdida de todos los rangos obtenidos.</p>
           </section>
         </div>
 
         <footer class="legal-footer">
-          <a routerLink="/" class="btn btn-primary">¡ENTENDIDO, A LA BATALLA!</a>
+          <a routerLink="/" class="btn btn-primary">¡ENTENDIDO, A LA GRIETA!</a>
         </footer>
       </div>
     </div>

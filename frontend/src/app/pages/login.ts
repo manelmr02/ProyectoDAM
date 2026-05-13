@@ -14,7 +14,7 @@ import { AuthService } from '../services/auth.service';
 
         <div class="auth-logo">🛡</div>
         <h2>Identificación</h2>
-        <p class="text-muted">Ingresa tus credenciales de comandante</p>
+        <p class="text-muted">Ingresa tus credenciales de invocador</p>
 
         <!-- Error banner -->
         <div class="alert alert-error" *ngIf="errorMsg()">
@@ -72,7 +72,7 @@ import { AuthService } from '../services/auth.service';
         </form>
 
         <p class="auth-footer">
-          ¿No tienes una división aún? <a routerLink="/register">Regístrate aquí</a>
+          ¿No tienes una cuenta aún? <a routerLink="/register">Regístrate aquí</a>
         </p>
       </div>
     </div>

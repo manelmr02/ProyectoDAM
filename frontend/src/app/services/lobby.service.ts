@@ -12,6 +12,8 @@ export interface LobbyPlayer {
   isOwner?: boolean;
   avatarColor: string;
   avatarImage?: string;
+  faction?: string;
+  regionLevel?: number;
 }
 
 export interface LobbyEntry {
@@ -40,6 +42,7 @@ export interface CreateLobbyDto {
   mode: string;
   hasPassword: boolean;
   password?: string;
+  faction?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -53,20 +56,20 @@ const AVATAR_COLORS = [
   '#ef4444', '#ec4899', '#3b82f6', '#84cc16',
 ];
 
-// Pool of NPC names to populate lobbies
+// Pool of Champions/Regions to populate lobbies
 const NPC_POOL: { name: string; clan: string }[] = [
-  { name: 'ComandanteRex',   clan: 'Legion de Fuego' },
-  { name: 'NightStalker',    clan: 'Sombras del Norte' },
-  { name: 'ViperElite',      clan: 'Cobra Roja' },
-  { name: 'ShadowMind',      clan: '' },
-  { name: 'IronFalcon',      clan: 'Aguila de Hierro' },
-  { name: 'GhostReaper',     clan: 'Espectros' },
-  { name: 'ThunderBolt',     clan: 'Trueno Azul' },
-  { name: 'DarkPhoenix',     clan: 'Ave Fenix' },
-  { name: 'StealthHunter',   clan: '' },
-  { name: 'CrimsonBlade',    clan: 'Filo Carmesi' },
-  { name: 'NovaCaptain',     clan: 'Nova Corps' },
-  { name: 'FrostWarden',     clan: '' },
+  { name: 'Garen',   clan: 'Demacia' },
+  { name: 'Darius',  clan: 'Noxus' },
+  { name: 'Irelia',  clan: 'Ionia' },
+  { name: 'Ashe',    clan: 'Freljord' },
+  { name: 'Vi',      clan: 'Piltover' },
+  { name: 'Jinx',    clan: 'Zaun' },
+  { name: 'Azir',    clan: 'Shurima' },
+  { name: 'Thresh',  clan: 'Shadow Isles' },
+  { name: 'Leona',   clan: 'Targon' },
+  { name: 'Miss Fortune', clan: 'Bilgewater' },
+  { name: 'Qiyana',  clan: 'Ixtal' },
+  { name: 'Kha\'Zix', clan: 'The Void' },
 ];
 
 const NPC_CHATS: { sender: string; text: string }[] = [
@@ -148,62 +151,33 @@ export class LobbyService {
     const seed: LobbyEntry[] = [
       {
         id: 4029,
-        name: 'Batalla Épica',
-        host: 'ComandanteRex',
-        description: 'Partida abierta para todos los niveles.',
+        name: 'Guerra por la Grieta',
+        host: 'Garen',
+        description: 'Demacia no retrocede.',
         players: 4,
         maxPlayers: 10,
         status: 'Esperando',
-        mode: 'Todos contra Todos',
+        mode: 'SoloQ',
         hasPassword: false,
         createdAt: new Date().toISOString(),
-        playerList: this.buildNpcList(['ComandanteRex', 'NightStalker', 'IronFalcon', 'GhostReaper'], 'ComandanteRex'),
+        playerList: this.buildNpcList(['Garen', 'Darius', 'Irelia', 'Ashe'], 'Garen'),
       },
       {
         id: 4030,
-        name: 'Guerra Fría',
-        host: 'NightStalker',
-        description: '',
+        name: 'Dominación Noxiana',
+        host: 'Darius',
+        description: 'La fuerza prevalece.',
         players: 7,
         maxPlayers: 10,
         status: 'Esperando',
-        mode: 'Todos contra Todos',
+        mode: 'DuoQ',
         hasPassword: true,
         password: '1234',
         createdAt: new Date().toISOString(),
         playerList: this.buildNpcList(
-          ['NightStalker','GhostReaper','ThunderBolt','DarkPhoenix','StealthHunter','CrimsonBlade','NovaCaptain'],
-          'NightStalker'
+          ['Darius','Thresh','Miss Fortune','Jinx','Vi','Leona','Azir'],
+          'Darius'
         ),
-      },
-      {
-        id: 4028,
-        name: 'Asalto Final',
-        host: 'ViperElite',
-        description: 'Partida avanzada, solo veteranos.',
-        players: 10,
-        maxPlayers: 10,
-        status: 'En curso',
-        mode: 'Eliminación',
-        hasPassword: false,
-        createdAt: new Date().toISOString(),
-        playerList: this.buildNpcList(
-          ['ViperElite','ShadowMind','IronFalcon','GhostReaper','ThunderBolt','DarkPhoenix','ComandanteRex','NightStalker','CrimsonBlade','NovaCaptain'],
-          'ViperElite'
-        ),
-      },
-      {
-        id: 4031,
-        name: 'Estrategia Oscura',
-        host: 'ShadowMind',
-        description: '',
-        players: 2,
-        maxPlayers: 6,
-        status: 'Esperando',
-        mode: 'Por Equipos',
-        hasPassword: false,
-        createdAt: new Date().toISOString(),
-        playerList: this.buildNpcList(['ShadowMind','FrostWarden'], 'ShadowMind'),
       },
     ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
@@ -277,6 +251,8 @@ export class LobbyService {
         isOwner: true,
         avatarColor: user?.avatarColor || authorColor,
         avatarImage: user?.avatarImage,
+        faction: dto.faction,
+        regionLevel: user?.regionalLevels?.[dto.faction || 'Demacia'] || 1,
       }],
     };
 
@@ -312,6 +288,8 @@ export class LobbyService {
             isOwner: false,
             avatarColor: user.avatarColor || AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
             avatarImage: user.avatarImage,
+            faction: user.faction || 'Demacia',
+            regionLevel: user.regionalLevels?.[user.faction || 'Demacia'] || 1,
           }
         ],
       };
@@ -379,5 +357,20 @@ export class LobbyService {
   reset(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.lobbies.set(this.seedLobbies());
+  }
+
+  changePlayerFaction(lobbyId: number, playerName: string, newFaction: string, level: number): void {
+    this.lobbies.update(list =>
+      list.map(l => {
+        if (l.id !== lobbyId) return l;
+        return {
+          ...l,
+          playerList: l.playerList.map(p =>
+            p.name === playerName ? { ...p, faction: newFaction, regionLevel: level } : p
+          )
+        };
+      })
+    );
+    this.save();
   }
 }
