@@ -214,12 +214,14 @@ public class GameService {
     }
 
     private List<Map<String, Object>> buildPlayerStates(Game game) {
-        return game.getPlayers().stream().map(p -> (Map<String, Object>) Map.of(
-            "username", p.getUsername(),
-            "currentHp", p.getCurrentHp(),
-            "maxHp", p.getMaxHp(),
-            "alive", p.isAlive()
-        )).toList();
+        return game.getPlayers().stream().map(p -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("username", p.getUsername());
+            map.put("currentHp", p.getCurrentHp());
+            map.put("maxHp", p.getMaxHp());
+            map.put("alive", p.isAlive());
+            return map;
+        }).toList();
     }
 
     private void broadcastGameState(Game game) {

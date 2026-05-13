@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,13 +23,13 @@ public class RankingController {
                 String username = (String) row[0];
                 long total = ((Number) row[1]).longValue();
                 long wins  = ((Number) row[2]).longValue();
-                return (Map<String, Object>) Map.of(
-                    "username", username,
-                    "wins", wins,
-                    "losses", total - wins,
-                    "gamesPlayed", total,
-                    "ratio", total > 0 ? wins * 100 / total : 0
-                );
+                Map<String, Object> map = new HashMap<>();
+                map.put("username", username);
+                map.put("wins", wins);
+                map.put("losses", total - wins);
+                map.put("gamesPlayed", total);
+                map.put("ratio", total > 0 ? wins * 100 / total : 0);
+                return map;
             }).toList()
         );
     }
@@ -39,12 +40,13 @@ public class RankingController {
         long wins   = stats.stream().filter(s -> "WIN".equals(s.getResult())).count();
         long losses = stats.stream().filter(s -> "LOSS".equals(s.getResult())).count();
         int damage  = stats.stream().mapToInt(s -> s.getDamageDealt()).sum();
-        return ResponseEntity.ok(Map.of(
-            "username", username,
-            "gamesPlayed", stats.size(),
-            "wins", wins, "losses", losses,
-            "totalDamageDealt", damage,
-            "recentGames", stats.stream().limit(10).toList()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("username", username);
+        response.put("gamesPlayed", stats.size());
+        response.put("wins", wins);
+        response.put("losses", losses);
+        response.put("totalDamageDealt", damage);
+        response.put("recentGames", stats.stream().limit(10).toList());
+        return ResponseEntity.ok(response);
     }
 }

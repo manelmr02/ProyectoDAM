@@ -33,3 +33,16 @@ Este documento detalla los pasos necesarios para configurar las herramientas req
 6. **Verificación**: Ejecuta el siguiente comando para confirmar la instalación:
    ```bash
    mvn --version
+
+Puerto 3307 MySQL
+```
+
+```bash
+cd C:\ProyectoDAM\backend
+mvn spring-boot:run
+```
+
+```bash
+cd C:\ProyectoDAM\frontend
+npm start
+```
