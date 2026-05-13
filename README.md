@@ -33,3 +33,9 @@ Este documento detalla los pasos necesarios para configurar las herramientas req
 6. **Verificación**: Ejecuta el siguiente comando para confirmar la instalación:
    ```bash
    mvn --version
+
+   cd C:\ProyectoDAM\backend
+mvn spring-boot:run
+
+cd C:\ProyectoDAM\frontend
+npm start
