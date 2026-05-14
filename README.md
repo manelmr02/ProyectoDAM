@@ -35,6 +35,7 @@ Este documento detalla los pasos necesarios para configurar las herramientas req
    mvn --version
 
 Puerto 3307 MySQL
+Puerto 27017 MongoDB
 
 ```bash
 cd C:\ProyectoDAM\backend
