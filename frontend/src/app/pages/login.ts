@@ -145,22 +145,20 @@ export class Login {
   errorMsg     = signal('');
   showPassword = signal(false);
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     this.errorMsg.set('');
     this.loading.set(true);
 
-    setTimeout(() => {
-      const result = this.auth.login(
-        this.form.usernameOrEmail.trim(),
-        this.form.password
-      );
-      this.loading.set(false);
+    const result = await this.auth.login(
+      this.form.usernameOrEmail.trim(),
+      this.form.password
+    );
+    this.loading.set(false);
 
-      if (result.ok) {
-        this.router.navigate(['/']);
-      } else {
-        this.errorMsg.set(result.error ?? 'Error desconocido.');
-      }
-    }, 500);
+    if (result.ok) {
+      this.router.navigate(['/']);
+    } else {
+      this.errorMsg.set(result.error ?? 'Error desconocido.');
+    }
   }
 }

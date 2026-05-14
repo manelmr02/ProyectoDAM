@@ -1,4 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { ProfanityService } from './profanity.service';
 
@@ -83,6 +85,8 @@ const SESSION_KEY = 'payload_session';
 export class AuthService {
   private router = inject(Router);
   private profanity = inject(ProfanityService);
+  private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:8080/api/auth';
 
   // ── Reactive state ──────────────────────────────────────────────
   readonly currentUser = signal<UserProfile | null>(this.loadSession());
@@ -128,76 +132,71 @@ export class AuthService {
   }
 
   // ── Public API ──────────────────────────────────────────────────
-  register(
+  async register(
     username: string,
     email: string,
     password: string,
     clan = ''
-  ): { ok: boolean; error?: string } {
-    const users = this.getUsers();
-
-    if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-      return { ok: false, error: 'Ese nombre de usuario ya está en uso.' };
-    }
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return { ok: false, error: 'Ya existe una cuenta con ese email.' };
-    }
-
+  ): Promise<{ ok: boolean; error?: string }> {
     if (this.profanity.containsBannedSubstring(username)) {
       return { ok: false, error: 'El nombre de usuario contiene palabras no permitidas.' };
     }
 
-    const defaults = generateDefaultProfile();
-    const profile: UserProfile = {
-      username,
-      email,
-      clan: clan || defaults.faction!,
-      level: 1,
-      createdAt: new Date().toISOString(),
-      avatarColor: defaults.avatarColor!,
-      avatarImage: undefined,
-      bio: defaults.bio!,
-      title: defaults.title!,
-      faction: defaults.faction!,
-      clanTag: '',
-      stats: defaults.stats!,
-    };
+    try {
+      const response: any = await firstValueFrom(
+        this.http.post(`${this.apiUrl}/register`, { username, email, password, clan })
+      );
+      
+      // Store token
+      localStorage.setItem('token', response.token);
+      
+      const defaults = generateDefaultProfile();
+      const profile: UserProfile = {
+        ...defaults,
+        username: response.user.username,
+        email: response.user.email,
+        clan: response.user.clan || defaults.faction!,
+        avatarColor: response.user.avatarColor || defaults.avatarColor!,
+        bio: response.user.bio || defaults.bio!,
+        level: response.user.level || 1,
+        stats: response.user.stats || defaults.stats!
+      } as UserProfile;
 
-    const stored: StoredUser = {
-      ...profile,
-      passwordHash: this.hashPassword(password),
-    };
-
-    users.push(stored);
-    this.saveUsers(users);
-
-    // Auto-login after register
-    this.startSession(profile);
-    return { ok: true };
+      this.startSession(profile);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.error?.error || 'Error al conectar con el servidor.' };
+    }
   }
 
-  login(
+  async login(
     usernameOrEmail: string,
     password: string
-  ): { ok: boolean; error?: string } {
-    const users = this.getUsers();
-    const hash  = this.hashPassword(password);
-    const q     = usernameOrEmail.toLowerCase();
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const response: any = await firstValueFrom(
+        this.http.post(`${this.apiUrl}/login`, { usernameOrEmail, password })
+      );
+      
+      localStorage.setItem('token', response.token);
+      
+      const defaults = generateDefaultProfile();
+      const profile: UserProfile = {
+        ...defaults,
+        username: response.user.username,
+        email: response.user.email,
+        clan: response.user.clan || defaults.faction!,
+        avatarColor: response.user.avatarColor || defaults.avatarColor!,
+        bio: response.user.bio || defaults.bio!,
+        level: response.user.level || 1,
+        stats: response.user.stats || defaults.stats!
+      } as UserProfile;
 
-    const found = users.find(
-      u =>
-        (u.username.toLowerCase() === q || u.email.toLowerCase() === q) &&
-        u.passwordHash === hash
-    );
-
-    if (!found) {
-      return { ok: false, error: 'Usuario o contraseña incorrectos.' };
+      this.startSession(profile);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.error?.error || 'Usuario o contraseña incorrectos.' };
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...profile } = found;
-    this.startSession(profile);
-    return { ok: true };
   }
 
   logout(): void {
