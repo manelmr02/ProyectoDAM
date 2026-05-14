@@ -247,7 +247,7 @@ export class Register {
     return map[score] ?? map[5];
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     this.errorMsg.set('');
     this.successMsg.set('');
 
@@ -258,22 +258,19 @@ export class Register {
 
     this.loading.set(true);
 
-    // Small simulated delay for UX
-    setTimeout(() => {
-      const result = this.auth.register(
-        this.form.username.trim(),
-        this.form.email.trim(),
-        this.form.password,
-        this.form.clan.trim()
-      );
-      this.loading.set(false);
+    const result = await this.auth.register(
+      this.form.username.trim(),
+      this.form.email.trim(),
+      this.form.password,
+      this.form.clan.trim()
+    );
+    this.loading.set(false);
 
-      if (result.ok) {
-        this.successMsg.set(`¡Bienvenido, ${this.form.username}! Redirigiendo...`);
-        setTimeout(() => this.router.navigate(['/']), 1500);
-      } else {
-        this.errorMsg.set(result.error ?? 'Error desconocido.');
-      }
-    }, 600);
+    if (result.ok) {
+      this.successMsg.set(`¡Bienvenido, ${this.form.username}! Redirigiendo...`);
+      setTimeout(() => this.router.navigate(['/']), 1500);
+    } else {
+      this.errorMsg.set(result.error ?? 'Error desconocido.');
+    }
   }
 }

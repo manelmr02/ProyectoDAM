@@ -35,7 +35,6 @@ Este documento detalla los pasos necesarios para configurar las herramientas req
    mvn --version
 
 Puerto 3307 MySQL
-```
 
 ```bash
 cd C:\ProyectoDAM\backend
