@@ -1,5 +1,6 @@
 package com.proyectodam.controllers;
 
+import com.proyectodam.dto.AuthDtos;
 import com.proyectodam.service.AuthService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +17,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody AuthDtos.RegisterRequest req) {
+        return ResponseEntity.ok(authService.register(req));
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {

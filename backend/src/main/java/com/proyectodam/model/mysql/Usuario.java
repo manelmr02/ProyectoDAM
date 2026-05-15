@@ -33,6 +33,9 @@ public class Usuario {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column
+    private String clan;
+
     @Column(nullable = false)
     private Integer monedas = 0;
 
