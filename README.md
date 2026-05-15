@@ -8,10 +8,10 @@ Repositorio dedicado al proyecto de fin de grado de 2ºDAM
 4. Ejecutar npx ng serve.
 
 - [x] Default
-- [ ] Usability improvement
-- [ ] BBDD SQL
-- [ ] BBDD NoSQL
-- [ ] Sockets Connection
+- [x] Usability improvement
+- [x] BBDD SQL
+- [x] BBDD NoSQL
+- [x] Sockets Connection
 
 
 # Guía de Configuración del Entorno de Desarrollo (Backend)
