@@ -611,7 +611,8 @@ export class Lobby implements OnInit, OnDestroy {
 
       if (remaining <= 0) {
         this.stopCountdown();
-        this.addSystem('¡BIENVENIDOS A LA GRIETA DEL INVOCADOR!');
+        const lobbyId = this.lobby()?.id;
+        this.router.navigate(['/battle', lobbyId]);
       }
     }, 500); // Check more frequently for better sync
   }
