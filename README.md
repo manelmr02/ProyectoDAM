@@ -46,3 +46,7 @@ mvn spring-boot:run
 cd C:\ProyectoDAM\frontend
 npm start
 ```
+
+
+COMANDO NUEVO EJECUCION MAVEN CON LA DEPENDECIA DE MAVEN WRAPPER (UTIL PARA INSTALACIONES QUE NO TENGAN MAVEN)
+.\mvnw.cmd spring-boot:run
