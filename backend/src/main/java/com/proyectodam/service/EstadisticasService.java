@@ -1,15 +1,15 @@
 package com.proyectodam.service;
 
 import com.proyectodam.model.mongo.PartidaMongo;
-import com.proyectodam.model.mongo.UsuarioMongo;
 import com.proyectodam.model.mysql.Partida;
 import com.proyectodam.model.mysql.Participante;
 import com.proyectodam.model.mysql.Region;
+import com.proyectodam.model.mysql.Usuario;
 import com.proyectodam.repository.mongo.PartidaMongoRepository;
-import com.proyectodam.repository.mongo.UsuarioMongoRepository;
 import com.proyectodam.repository.mysql.PartidaRepository;
 import com.proyectodam.repository.mysql.ParticipanteRepository;
 import com.proyectodam.repository.mysql.RegionRepository;
+import com.proyectodam.repository.mysql.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,7 @@ public class EstadisticasService {
     private final PartidaRepository partidaRepository;
     private final ParticipanteRepository participanteRepository;
     private final PartidaMongoRepository partidaMongoRepository;
-    private final UsuarioMongoRepository usuarioMongoRepository;
+    private final UsuarioRepository usuarioRepository;
     private final RegionRepository regionRepository;
 
     @Transactional(readOnly = true)
@@ -51,10 +51,10 @@ public class EstadisticasService {
             pm.setParticipantes(participantes.stream().map(p -> {
                 PartidaMongo.ParticipanteMongo pmo = new PartidaMongo.ParticipanteMongo();
                 pmo.setUsuarioId(p.getUsuarioId());
-                
-                UsuarioMongo u = usuarioMongoRepository.findById(p.getUsuarioId()).orElse(null);
+
+                Usuario u = usuarioRepository.findById(Long.parseLong(p.getUsuarioId())).orElse(null);
                 pmo.setNickname(u != null ? u.getNickname() : "Unknown");
-                
+
                 pmo.setRegionId(p.getRegion().getId());
                 pmo.setNombreRegion(p.getRegion().getNombre());
                 pmo.setTipoRegion(p.getRegion().getTipo());
@@ -100,7 +100,6 @@ public class EstadisticasService {
     }
 
     public List<Map<String, Object>> rankingUsuarios() {
-        // Obtenemos todas las regiones y sumamos victorias por usuarioId
         List<Region> regiones = regionRepository.findAll();
         Map<String, Integer> victoriasPorUsuario = regiones.stream()
                 .collect(Collectors.groupingBy(Region::getUsuarioId,
@@ -108,7 +107,7 @@ public class EstadisticasService {
 
         return victoriasPorUsuario.entrySet().stream()
                 .map(entry -> {
-                    UsuarioMongo u = usuarioMongoRepository.findById(entry.getKey()).orElse(null);
+                    Usuario u = usuarioRepository.findById(Long.parseLong(entry.getKey())).orElse(null);
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", entry.getKey());
                     map.put("nickname", u != null ? u.getNickname() : "Unknown");

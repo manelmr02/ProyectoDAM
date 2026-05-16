@@ -1,6 +1,6 @@
 package com.proyectodam.controllers;
 
-import com.proyectodam.model.mongo.UsuarioMongo;
+import com.proyectodam.model.mysql.Usuario;
 import com.proyectodam.service.UsuarioService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -30,20 +30,20 @@ public class UsuarioController {
 
     // RF-04
     @GetMapping
-    public ResponseEntity<List<UsuarioMongo>> listarUsuarios() {
+    public ResponseEntity<List<Usuario>> listarUsuarios() {
         return ResponseEntity.ok(usuarioService.listarUsuarios());
     }
 
     // RF-05
     @GetMapping("/{id}")
-    public ResponseEntity<UsuarioMongo> getUsuario(@PathVariable String id) {
+    public ResponseEntity<Usuario> getUsuario(@PathVariable String id) {
         return ResponseEntity.ok(usuarioService.getUsuario(id));
     }
 
     // RF-06
     @PutMapping("/{id}")
-    public ResponseEntity<UsuarioMongo> actualizarUsuario(@PathVariable String id,
-                                                       @RequestBody Map<String, Object> updates) {
+    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable String id,
+                                                      @RequestBody Map<String, Object> updates) {
         return ResponseEntity.ok(usuarioService.actualizarUsuario(id, updates));
     }
 

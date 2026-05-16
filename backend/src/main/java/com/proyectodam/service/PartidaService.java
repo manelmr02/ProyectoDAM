@@ -2,9 +2,7 @@ package com.proyectodam.service;
 
 import com.proyectodam.controllers.PartidaController.*;
 import com.proyectodam.exception.ResourceNotFoundException;
-import com.proyectodam.model.mongo.UsuarioMongo;
 import com.proyectodam.model.mysql.*;
-import com.proyectodam.repository.mongo.UsuarioMongoRepository;
 import com.proyectodam.repository.mysql.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +17,7 @@ public class PartidaService {
 
     private final PartidaRepository partidaRepository;
     private final ParticipanteRepository participanteRepository;
-    private final UsuarioMongoRepository usuarioMongoRepository;
+    private final UsuarioRepository usuarioRepository;
     private final RegionRepository regionRepository;
 
     @Transactional
@@ -32,7 +30,7 @@ public class PartidaService {
         partidaRepository.save(partida);
 
         for (ParticipanteDto dto : req.getParticipantes()) {
-            if (!usuarioMongoRepository.existsById(dto.getUsuario().getId())) {
+            if (!usuarioRepository.existsById(Long.parseLong(dto.getUsuario().getId()))) {
                 throw new ResourceNotFoundException("Usuario no encontrado: " + dto.getUsuario().getId());
             }
             Region region = regionRepository.findById(Long.parseLong(dto.getRegion().getId()))
@@ -53,9 +51,9 @@ public class PartidaService {
     public Map<String, Object> finalizarPartida(Long idPartida, String idGanador, String idPerdedor) {
         Partida partida = partidaRepository.findById(idPartida)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada: " + idPartida));
-        UsuarioMongo ganador = usuarioMongoRepository.findById(idGanador)
+        Usuario ganador = usuarioRepository.findById(Long.parseLong(idGanador))
                 .orElseThrow(() -> new ResourceNotFoundException("Ganador no encontrado: " + idGanador));
-        UsuarioMongo perdedor = usuarioMongoRepository.findById(idPerdedor)
+        Usuario perdedor = usuarioRepository.findById(Long.parseLong(idPerdedor))
                 .orElseThrow(() -> new ResourceNotFoundException("Perdedor no encontrado: " + idPerdedor));
 
         partida.setEstado("FINALIZADO");
@@ -63,8 +61,8 @@ public class PartidaService {
 
         ganador.setMonedas(ganador.getMonedas() + 200);
         perdedor.setMonedas(perdedor.getMonedas() + 50);
-        usuarioMongoRepository.save(ganador);
-        usuarioMongoRepository.save(perdedor);
+        usuarioRepository.save(ganador);
+        usuarioRepository.save(perdedor);
 
         participanteRepository.findByPartidaId(idPartida).forEach(p -> {
             if (p.getUsuarioId().equals(idGanador)) {
@@ -81,8 +79,7 @@ public class PartidaService {
     }
 
     @Transactional
-    public Map<String, String> finalizarConPosiciones(Long idPartida,
-                                                       List<JugadorPosicion> jugadores) {
+    public Map<String, String> finalizarConPosiciones(Long idPartida, List<JugadorPosicion> jugadores) {
         Partida partida = partidaRepository.findById(idPartida)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada: " + idPartida));
 
@@ -92,13 +89,13 @@ public class PartidaService {
         List<Participante> participantes = participanteRepository.findByPartidaId(idPartida);
 
         jugadores.forEach(jp -> {
-            UsuarioMongo usuario = usuarioMongoRepository.findById(jp.getIdJugador())
+            Usuario usuario = usuarioRepository.findById(Long.parseLong(jp.getIdJugador()))
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Usuario no encontrado: " + jp.getIdJugador()));
 
             int premio = Math.max(0, 500 - 50 * (jp.getPosicion() - 1));
             usuario.setMonedas(usuario.getMonedas() + premio);
-            usuarioMongoRepository.save(usuario);
+            usuarioRepository.save(usuario);
 
             participantes.stream()
                 .filter(p -> p.getUsuarioId().equals(jp.getIdJugador()))

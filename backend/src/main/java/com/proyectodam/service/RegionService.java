@@ -2,10 +2,10 @@ package com.proyectodam.service;
 
 import com.proyectodam.exception.BadRequestException;
 import com.proyectodam.exception.ResourceNotFoundException;
-import com.proyectodam.model.mongo.UsuarioMongo;
 import com.proyectodam.model.mysql.Region;
-import com.proyectodam.repository.mongo.UsuarioMongoRepository;
+import com.proyectodam.model.mysql.Usuario;
 import com.proyectodam.repository.mysql.RegionRepository;
+import com.proyectodam.repository.mysql.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,18 +18,18 @@ import java.util.Map;
 public class RegionService {
 
     private final RegionRepository regionRepository;
-    private final UsuarioMongoRepository usuarioMongoRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public List<Region> getRegionesDeUsuario(String usuarioId) {
-        if (!usuarioMongoRepository.existsById(usuarioId))
+        if (!usuarioRepository.existsById(Long.parseLong(usuarioId)))
             throw new ResourceNotFoundException("Usuario no encontrado: " + usuarioId);
         return regionRepository.findByUsuarioId(usuarioId);
     }
 
     @Transactional
     public Region comprarRegion(String usuarioId, String nombre, String tipo) {
-        UsuarioMongo usuario = usuarioMongoRepository.findById(usuarioId)
+        Usuario usuario = usuarioRepository.findById(Long.parseLong(usuarioId))
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + usuarioId));
 
         int coste;
@@ -51,13 +51,13 @@ public class RegionService {
         region.setUsuarioId(usuarioId);
 
         usuario.setMonedas(usuario.getMonedas() - coste);
-        usuarioMongoRepository.save(usuario);
+        usuarioRepository.save(usuario);
         return regionRepository.save(region);
     }
 
     @Transactional
     public Region crearRegion(String usuarioId, String nombre, String tipo) {
-        if (!usuarioMongoRepository.existsById(usuarioId))
+        if (!usuarioRepository.existsById(Long.parseLong(usuarioId)))
             throw new ResourceNotFoundException("Usuario no encontrado: " + usuarioId);
 
         Region region = new Region();
