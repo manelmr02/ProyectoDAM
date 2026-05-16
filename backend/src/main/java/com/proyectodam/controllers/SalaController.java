@@ -5,8 +5,11 @@ import com.proyectodam.model.mysql.SalaJugador;
 import com.proyectodam.service.SalaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/salas")
@@ -15,6 +18,7 @@ import java.util.List;
 public class SalaController {
 
     private final SalaService salaService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping
     public ResponseEntity<Sala> crearSala(@RequestBody Sala sala) {
@@ -35,6 +39,7 @@ public class SalaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarSala(@PathVariable Long id) {
         salaService.eliminarSala(id);
+        messagingTemplate.convertAndSend("/topic/sala/" + id, Map.of("deleted", true));
         return ResponseEntity.noContent().build();
     }
 
@@ -43,12 +48,20 @@ public class SalaController {
                                        @RequestBody SalaJugador participante,
                                        @RequestParam(required = false) String password) {
         Sala sala = salaService.unirseASala(id, participante, password);
+        if (sala != null) {
+            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
+        }
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.badRequest().build();
     }
 
     @PostMapping("/{id}/salir")
     public ResponseEntity<?> salir(@PathVariable Long id, @RequestParam String username) {
         Sala sala = salaService.salirDeSala(id, username);
+        if (sala != null) {
+            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
+        } else {
+            messagingTemplate.convertAndSend("/topic/sala/" + id, Map.of("deleted", true));
+        }
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.noContent().build();
     }
 
@@ -57,6 +70,14 @@ public class SalaController {
                                                   @RequestParam String username,
                                                   @RequestParam String estado) {
         Sala sala = salaService.actualizarEstadoJugador(id, username, estado);
+        if (sala != null) {
+            boolean allReady = sala.getJugadores().size() >= 2
+                    && sala.getJugadores().stream().allMatch(j -> "Ready".equals(j.getStatus()));
+            if (allReady) {
+                sala.setStartReadyTime(System.currentTimeMillis());
+            }
+            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
+        }
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.notFound().build();
     }
 }

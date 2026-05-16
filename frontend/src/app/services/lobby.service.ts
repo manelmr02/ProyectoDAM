@@ -75,7 +75,7 @@ export class LobbyService {
     }
   }
 
-  private mapToLobbyEntry(s: any): LobbyEntry {
+  mapToLobbyEntry(s: any): LobbyEntry {
     return {
       id: s.id,
       name: s.nombre,
@@ -86,6 +86,7 @@ export class LobbyService {
       status: s.estado || 'LOBBY',
       mode: 'Standard',
       hasPassword: s.esPrivada,
+      startReadyTime: s.startReadyTime ?? null,
       playerList: (s.jugadores || []).map((p: any) => ({
         name: p.nombre,
         faction: p.faction,
@@ -193,13 +194,6 @@ export class LobbyService {
     );
     
     const updated = this.mapToLobbyEntry(s);
-    
-    // Lógica de cuenta atrás (local por ahora, hasta tener WebSockets)
-    const allReady = updated.playerList.length >= 2 && updated.playerList.every(p => p.status === 'Ready');
-    if (allReady) {
-      updated.startReadyTime = Date.now();
-    }
-
     this.lobbies.update(list => list.map(l => l.id === updated.id ? updated : l));
     return updated;
   }

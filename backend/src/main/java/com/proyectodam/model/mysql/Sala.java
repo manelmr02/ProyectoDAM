@@ -27,4 +27,7 @@ public class Sala {
     @OneToMany(mappedBy = "sala", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonIgnoreProperties("sala")
     private List<SalaJugador> jugadores = new ArrayList<>();
+
+    @Transient
+    private Long startReadyTime;
 }

@@ -5,6 +5,8 @@ import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { LobbyService, LobbyEntry } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
 import { ProfanityService } from '../services/profanity.service';
+import { WebSocketService } from '../services/websocket.service';
+import type { StompSubscription } from '@stomp/stompjs';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
@@ -363,6 +365,7 @@ export class Lobby implements OnInit, OnDestroy {
   private lobbyService = inject(LobbyService);
   readonly auth = inject(AuthService);
   private profanity = inject(ProfanityService);
+  private ws = inject(WebSocketService);
 
   lobby = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
@@ -374,9 +377,8 @@ export class Lobby implements OnInit, OnDestroy {
 
   regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'The Void'];
 
-
   private timers: ReturnType<typeof setTimeout>[] = [];
-  private pollId: any = null;
+  private wsSubscriptions: StompSubscription[] = [];
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
 
@@ -447,25 +449,43 @@ export class Lobby implements OnInit, OnDestroy {
 
       // Sync isReady state
       const me = found.playerList.find(p => p.name === this.myName());
-      if (me) {
-        this.isReady.set(me.status === 'Ready');
-      }
+      if (me) this.isReady.set(me.status === 'Ready');
 
-      // Polling para sincronizar el estado de otros jugadores cada 3s
-      this.pollId = setInterval(async () => {
-        const current = this.lobby();
-        if (!current) return;
-        const refreshed = await this.lobbyService.getLobbyById(current.id);
-        if (!refreshed) return;
-        // Preservar startReadyTime local si ya estaba activo
-        if (current.startReadyTime && !refreshed.startReadyTime) {
-          refreshed.startReadyTime = current.startReadyTime;
-        }
-        this.lobby.set(refreshed);
-        // Sincronizar isReady con el estado real del servidor
-        const meRefreshed = refreshed.playerList.find(p => p.name === this.myName());
-        if (meRefreshed) this.isReady.set(meRefreshed.status === 'Ready');
-      }, 3000);
+      // WebSocket: subscribe to sala updates and chat
+      this.ws.connect().then(() => {
+        const salaSub = this.ws.subscribeToSala(id, (data: any) => {
+          if (data.deleted) {
+            this.addSystem('La sala ha sido eliminada.');
+            setTimeout(() => this.router.navigate(['/']), 2000);
+            return;
+          }
+          const mapped = this.lobbyService.mapToLobbyEntry(data);
+          this.lobby.set(mapped);
+          const meWs = mapped.playerList.find((p: any) => p.name === this.myName());
+          if (meWs) this.isReady.set(meWs.status === 'Ready');
+        });
+
+        const chatSub = this.ws.subscribeToChat(id, (msg: any) => {
+          if (msg.sender !== this.myName()) {
+            this.addMsg(msg.sender, msg.text);
+          }
+        });
+
+        this.wsSubscriptions = [salaSub, chatSub];
+      }).catch(() => {
+        // Fallback to polling if WebSocket unavailable
+        const fallbackId = setInterval(async () => {
+          const current = this.lobby();
+          if (!current) return;
+          const refreshed = await this.lobbyService.getLobbyById(current.id);
+          if (refreshed) {
+            this.lobby.set(refreshed);
+            const meR = refreshed.playerList.find(p => p.name === this.myName());
+            if (meR) this.isReady.set(meR.status === 'Ready');
+          }
+        }, 3000);
+        this.wsSubscriptions = [{ id: '', unsubscribe: () => clearInterval(fallbackId) }] as any;
+      });
     });
   }
 
@@ -489,11 +509,9 @@ export class Lobby implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.timers.forEach(t => clearTimeout(t));
-    if (this.pollId) clearInterval(this.pollId);
+    this.wsSubscriptions.forEach(s => s.unsubscribe());
     this.stopCountdown();
 
-    // If the user navigates away while ready, cancel their ready state
-    // so the countdown stops for everyone.
     if (this.isReady()) {
       this.toggleReady();
     }
@@ -504,9 +522,8 @@ export class Lobby implements OnInit, OnDestroy {
     if (!l) return;
     this.isReady.update(v => !v);
     const newStatus = this.isReady() ? 'Ready' : 'Waiting';
-    // Usamos el resultado directo para preservar startReadyTime
-    const updated = await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
-    if (updated) this.lobby.set(updated);
+    await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
+    // Lobby se actualiza via WebSocket broadcast del servidor
     this.addSystem(this.isReady()
       ? `${this.myName()} está LISTO.`
       : `${this.myName()} canceló el estado listo.`
@@ -542,6 +559,10 @@ export class Lobby implements OnInit, OnDestroy {
     if (!text) return;
 
     const filtered = this.profanity.filterText(text);
+    const l = this.lobby();
+    if (l) {
+      this.ws.sendChat(l.id, { sender: this.myName(), text: filtered, time: this.now() });
+    }
     this.addMsg(this.myName(), filtered);
     this.chatInput = '';
     this.scrollChat();
