@@ -20,6 +20,12 @@ public class SalaController {
     private final SalaService salaService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private void broadcast(Long id, Object payload) {
+        try {
+            messagingTemplate.convertAndSend("/topic/sala/" + id, payload);
+        } catch (Exception ignored) {}
+    }
+
     @PostMapping
     public ResponseEntity<Sala> crearSala(@RequestBody Sala sala) {
         return ResponseEntity.ok(salaService.crearSala(sala));
@@ -39,7 +45,7 @@ public class SalaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarSala(@PathVariable Long id) {
         salaService.eliminarSala(id);
-        messagingTemplate.convertAndSend("/topic/sala/" + id, Map.of("deleted", true));
+        broadcast(id, Map.of("deleted", true));
         return ResponseEntity.noContent().build();
     }
 
@@ -48,20 +54,14 @@ public class SalaController {
                                        @RequestBody SalaJugador participante,
                                        @RequestParam(required = false) String password) {
         Sala sala = salaService.unirseASala(id, participante, password);
-        if (sala != null) {
-            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
-        }
+        if (sala != null) broadcast(id, sala);
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.badRequest().build();
     }
 
     @PostMapping("/{id}/salir")
     public ResponseEntity<?> salir(@PathVariable Long id, @RequestParam String username) {
         Sala sala = salaService.salirDeSala(id, username);
-        if (sala != null) {
-            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
-        } else {
-            messagingTemplate.convertAndSend("/topic/sala/" + id, Map.of("deleted", true));
-        }
+        broadcast(id, sala != null ? sala : Map.of("deleted", true));
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.noContent().build();
     }
 
@@ -76,7 +76,7 @@ public class SalaController {
             if (allReady) {
                 sala.setStartReadyTime(System.currentTimeMillis());
             }
-            messagingTemplate.convertAndSend("/topic/sala/" + id, sala);
+            broadcast(id, sala);
         }
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.notFound().build();
     }
