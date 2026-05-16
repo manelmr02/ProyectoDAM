@@ -74,15 +74,15 @@ public class PartidaController {
 
         @Data
         public static class IdRef {
-            private Long id;
+            private String id;
         }
     }
 
     @Data
     public static class FinalizarRequest {
         @NotNull private Long idPartida;
-        @NotNull private Long idGanador;
-        @NotNull private Long idPerdedor;
+        @NotNull private String idGanador;
+        @NotNull private String idPerdedor;
     }
 
     @Data
@@ -93,7 +93,7 @@ public class PartidaController {
 
     @Data
     public static class JugadorPosicion {
-        @NotNull private Long idJugador;
+        @NotNull private String idJugador;
         @NotNull private Integer posicion;
     }
 }

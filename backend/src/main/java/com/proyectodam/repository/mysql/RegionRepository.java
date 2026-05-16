@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface RegionRepository extends JpaRepository<Region, Long> {
-    List<Region> findByUsuarioId(Long usuarioId);
+    List<Region> findByUsuarioId(String usuarioId);
 
     // RF-12: ranking por victorias descendente
     List<Region> findAllByOrderByVictoriasDesc();

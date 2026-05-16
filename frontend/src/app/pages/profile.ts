@@ -60,22 +60,7 @@ import { ClanService } from '../services/clan.service';
         </div>
       </div>
 
-      <!-- ═══════════ REGIONAL LEVELS ═══════════ -->
-      <div class="regional-section glass-panel">
-        <h2 class="section-title"><span class="title-accent">|</span> Dominio de Regiones</h2>
-        <div class="regional-grid">
-          <div class="regional-card" *ngFor="let reg of regionsList()">
-            <div class="reg-name">{{ reg.name }}</div>
-            <div class="reg-level">Nivel {{ reg.level }}</div>
-            <div class="reg-progress-bar">
-              <div class="reg-progress-fill" [style.width.%]="(reg.level % 10) * 10 || 100"></div>
-            </div>
-            <div class="reg-advantage">{{ reg.advantage }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════ EDIT PANEL ═══════════ -->
+            <!-- ═══════════ EDIT PANEL ═══════════ -->
       <div class="edit-panel glass-panel animate-slide-down" *ngIf="editing()">
         <h3>⚙️ Configuración del Perfil</h3>
 
@@ -161,6 +146,22 @@ import { ClanService } from '../services/clan.service';
           </div>
         </form>
       </div>
+
+      <!-- ═══════════ REGIONAL LEVELS ═══════════ -->
+      <div class="regional-section glass-panel">
+        <h2 class="section-title"><span class="title-accent">|</span> Dominio de Regiones</h2>
+        <div class="regional-grid">
+          <div class="regional-card" *ngFor="let reg of regionsList()">
+            <div class="reg-name">{{ reg.name }}</div>
+            <div class="reg-level">Nivel {{ reg.level }}</div>
+            <div class="reg-progress-bar">
+              <div class="reg-progress-fill" [style.width.%]="(reg.level % 10) * 10 || 100"></div>
+            </div>
+            <div class="reg-advantage">{{ reg.advantage }}</div>
+          </div>
+        </div>
+      </div>
+
 
       <!-- ═══════════ STATS GRID ═══════════ -->
       <div class="stats-section">
@@ -587,10 +588,10 @@ export class Profile implements OnInit {
   combatRank = computed(() => {
     const wins = this.stats().wins;
     if (wins >= 101) return 'Challenger';
-    if (wins >= 51)  return 'Gran Maestro';
-    if (wins >= 31)  return 'Diamante';
-    if (wins >= 16)  return 'Platino';
-    if (wins >= 6)   return 'Oro';
+    if (wins >= 51) return 'Gran Maestro';
+    if (wins >= 31) return 'Diamante';
+    if (wins >= 16) return 'Platino';
+    if (wins >= 6) return 'Oro';
     return 'Hierro';
   });
 
@@ -720,7 +721,7 @@ export class Profile implements OnInit {
       reader.onload = (e: any) => {
         const base64 = e.target.result as string;
         this.draft.avatarImage = base64;
-        
+
         // If not editing, save immediately
         if (!this.editing()) {
           this.auth.updateProfile({ avatarImage: base64 });
@@ -734,10 +735,10 @@ export class Profile implements OnInit {
 
   leaveClan() {
     if (this.user()!.clan) {
-       this.clanService.leaveClan(this.user()!.clan, this.user()!.username);
-       this.auth.updateProfile({ clan: '', clanTag: '' });
-       this.editing.set(false);
-       setTimeout(() => this.toggleEdit(), 10);
+      this.clanService.leaveClan(this.user()!.clan, this.user()!.username);
+      this.auth.updateProfile({ clan: '', clanTag: '' });
+      this.editing.set(false);
+      setTimeout(() => this.toggleEdit(), 10);
     }
   }
 
@@ -747,29 +748,29 @@ export class Profile implements OnInit {
 
     if (clanChanged || tagChanged) {
       if (this.draft.clan && !this.user()!.clanTag) {
-          if (this.draft.clanTag) {
-              // Create
-              const res = this.clanService.createClan(this.draft.clan.trim(), this.draft.clanTag.trim(), this.user()!.username);
-              if (!res.ok) {
-                  this.saveMsg.set('Error: ' + res.error);
-                  return;
-              }
-              this.draft.clanTag = res.clan!.tag;
-              this.draft.clan = res.clan!.name;
-          } else {
-              // Join
-              const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
-              if (!res.ok) {
-                  this.saveMsg.set('Error: ' + res.error);
-                  return;
-              }
-              this.draft.clanTag = res.clan!.tag;
-              this.draft.clan = res.clan!.name;
+        if (this.draft.clanTag) {
+          // Create
+          const res = this.clanService.createClan(this.draft.clan.trim(), this.draft.clanTag.trim(), this.user()!.username);
+          if (!res.ok) {
+            this.saveMsg.set('Error: ' + res.error);
+            return;
           }
+          this.draft.clanTag = res.clan!.tag;
+          this.draft.clan = res.clan!.name;
+        } else {
+          // Join
+          const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
+          if (!res.ok) {
+            this.saveMsg.set('Error: ' + res.error);
+            return;
+          }
+          this.draft.clanTag = res.clan!.tag;
+          this.draft.clan = res.clan!.name;
+        }
       } else if (!this.draft.clan && this.user()!.clanTag) {
-          // Did they clear the clan name? Assume they want to leave
-          this.leaveClan();
-          return;
+        // Did they clear the clan name? Assume they want to leave
+        this.leaveClan();
+        return;
       }
     }
 

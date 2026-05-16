@@ -21,13 +21,13 @@ public class RegionController {
 
     // RF-08
     @GetMapping("/api/usuarios/{id}/regiones")
-    public ResponseEntity<List<Region>> getRegionesUsuario(@PathVariable Long id) {
+    public ResponseEntity<List<Region>> getRegionesUsuario(@PathVariable String id) {
         return ResponseEntity.ok(regionService.getRegionesDeUsuario(id));
     }
 
     // RF-09
     @PostMapping("/api/usuarios/{id}/comprar-region")
-    public ResponseEntity<Region> comprarRegion(@PathVariable Long id,
+    public ResponseEntity<Region> comprarRegion(@PathVariable String id,
                                                  @Valid @RequestBody ComprarRegionRequest req) {
         return ResponseEntity.ok(regionService.comprarRegion(id, req.getNombre(), req.getTipo()));
     }
@@ -73,8 +73,8 @@ public class RegionController {
 
     @Data
     public static class CreateRegionRequest {
-        @NotNull  private Long usuarioId;
-        @NotBlank private String nombre;
-        @NotBlank private String tipo;
+        @NotNull private String usuarioId;
+        @NotNull private String nombre;
+        @NotNull private String tipo;
     }
 }
