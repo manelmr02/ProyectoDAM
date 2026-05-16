@@ -79,4 +79,16 @@ public class GameWebSocketController {
         GameState state = gameService.surrender(id, action.getPlayer());
         if (state != null) broadcast(id, state);
     }
+
+    @MessageMapping("/partida/{id}/ultimate")
+    public void ultimate(@DestinationVariable String id, GameAction action) {
+        GameState state = gameService.ultimate(id, action.getPlayer(), action.getTarget());
+        if (state != null) broadcast(id, state);
+    }
+
+    @MessageMapping("/partida/{id}/recall")
+    public void recall(@DestinationVariable String id, GameAction action) {
+        GameState state = gameService.recall(id, action.getPlayer());
+        if (state != null) broadcast(id, state);
+    }
 }

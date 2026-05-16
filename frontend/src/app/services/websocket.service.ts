@@ -96,6 +96,22 @@ export class WebSocketService {
     });
   }
 
+  sendUltimate(salaId: string, player: string, target: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/ultimate`,
+      body: JSON.stringify({ type: 'ULTIMATE', player, target })
+    });
+  }
+
+  sendRecall(salaId: string, player: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/recall`,
+      body: JSON.stringify({ type: 'RECALL', player })
+    });
+  }
+
   sendSurrender(salaId: string, player: string): void {
     if (!this.client.connected) return;
     this.client.publish({

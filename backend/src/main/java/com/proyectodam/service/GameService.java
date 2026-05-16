@@ -15,14 +15,21 @@ public class GameService {
 
     private final ConcurrentHashMap<String, GameState> activeGames = new ConcurrentHashMap<>();
 
-    private static final int    ATTACK_COST       = 150;
-    private static final double BASE_SUCCESS_RATE = 0.50;
-    private static final int    WIN_REWARD        = 200;
-    private static final int    LOSE_REWARD       = 50;
-    private static final int    WIN_DAMAGE        = 2;
-    private static final int    LOSE_DAMAGE       = 1;
-    private static final double REINFORCE_FAIL_STEP = 0.20; // +20% per attempt
-    private static final double REINFORCE_FAIL_CAP  = 0.80;
+    private static final int    ATTACK_COST          = 150;
+    private static final double BASE_SUCCESS_RATE    = 0.50;
+    private static final int    WIN_REWARD           = 200;
+    private static final int    LOSE_REWARD          = 50;
+    private static final int    WIN_DAMAGE           = 2;
+    private static final int    LOSE_DAMAGE          = 1;
+    private static final double REINFORCE_FAIL_STEP  = 0.20;
+    private static final double REINFORCE_FAIL_CAP   = 0.80;
+    private static final int    ABILITY_COST         = 3000;
+    private static final int    TP_ABILITY_COST      = 5000;
+
+    private static final Set<String> ULTIMATE_FACTIONS = Set.of(
+            "Noxus", "Shadow Isles", "Void", "Shurima", "Zaun", "Bilgewater", "Ixtal", "Tierras Perdidas");
+    private static final Set<String> RECALL_FACTIONS = Set.of(
+            "Demacia", "Freljord", "Ionia", "Piltover", "Targon", "Tierras Perdidas");
 
     @AllArgsConstructor @Getter
     private static class FactionStats {
@@ -79,8 +86,8 @@ public class GameService {
         new ItemTemplate("ImmortalShield",   "Immortal Shieldbow",     "Resetea fallo de refuerzo","resetReinforce",6673,  0)
     );
 
-    private static final Map<String, String[]>      FACTION_VISUAL = new LinkedHashMap<>();
-    private static final Map<String, FactionStats>  FACTION_STATS  = new LinkedHashMap<>();
+    private static final Map<String, String[]>     FACTION_VISUAL = new LinkedHashMap<>();
+    private static final Map<String, FactionStats> FACTION_STATS  = new LinkedHashMap<>();
     private static final FactionStats DEFAULT_STATS = new FactionStats(10, 1000, 100, 0.0, 280);
 
     static {
@@ -150,6 +157,7 @@ public class GameService {
             if (name == null || name.isBlank()) continue;
 
             String faction = player.getFaction() != null ? player.getFaction() : "Demacia";
+            if ("The Void".equals(faction)) faction = "Void"; // legacy alias
             FactionStats stats = FACTION_STATS.getOrDefault(faction, DEFAULT_STATS);
 
             state.getCoins().put(name, stats.getStartCoins());
@@ -169,13 +177,6 @@ public class GameService {
             state.getRegions().put(name, region);
         }
 
-        // Give first player of Tierras Perdidas their first item choices
-        String first = order.get(0);
-        GameState.RegionNodeState firstRegion = state.getRegions().get(first);
-        if (firstRegion != null && "Tierras Perdidas".equals(firstRegion.getFaction())) {
-            giveItemsToPlayer(state, first);
-        }
-
         state.getLog().add("¡La batalla de Runaterra ha comenzado! Turno de " + order.get(0) + ".");
         return state;
     }
@@ -187,7 +188,6 @@ public class GameService {
         if (state == null || !"PLAYING".equals(state.getStatus())) return null;
         if (!state.getCurrentTurnPlayer().equals(attackerName)) return null;
         if (state.isHasActedThisTurn()) return null;
-
         if (state.getCoins().getOrDefault(attackerName, 0) < ATTACK_COST) return null;
 
         GameState.RegionNodeState targetRegion = state.getRegions().get(targetName);
@@ -244,8 +244,8 @@ public class GameService {
         int cost = region.getReinforceCost();
         if (state.getCoins().getOrDefault(playerName, 0) < cost) return null;
 
-        int attempts    = state.getReinforceCount().getOrDefault(playerName, 0);
-        double failPct  = Math.min(REINFORCE_FAIL_CAP, attempts * REINFORCE_FAIL_STEP);
+        int attempts   = state.getReinforceCount().getOrDefault(playerName, 0);
+        double failPct = Math.min(REINFORCE_FAIL_CAP, attempts * REINFORCE_FAIL_STEP);
 
         state.getCoins().merge(playerName, -cost, Integer::sum);
         state.setHasActedThisTurn(true);
@@ -260,6 +260,78 @@ public class GameService {
                     + region.getMaxLives() + " vidas). -" + cost + "💰");
         }
 
+        return state;
+    }
+
+    public GameState ultimate(String salaId, String attackerName, String targetName) {
+        GameState state = activeGames.get(salaId);
+        if (state == null || !"PLAYING".equals(state.getStatus())) return null;
+        if (!state.getCurrentTurnPlayer().equals(attackerName)) return null;
+        if (state.isHasActedThisTurn()) return null;
+
+        GameState.RegionNodeState attackerRegion = state.getRegions().get(attackerName);
+        if (attackerRegion == null || attackerRegion.getLives() <= 0) return null;
+
+        String faction = attackerRegion.getFaction();
+        if (!ULTIMATE_FACTIONS.contains(faction)) return null;
+
+        int cost = "Tierras Perdidas".equals(faction) ? TP_ABILITY_COST : ABILITY_COST;
+        if (state.getCoins().getOrDefault(attackerName, 0) < cost) return null;
+
+        GameState.RegionNodeState targetRegion = state.getRegions().get(targetName);
+        if (targetRegion == null || targetName.equals(attackerName)) return null;
+        if (targetRegion.getLives() <= 0) return null;
+
+        state.getCoins().merge(attackerName, -cost, Integer::sum);
+        state.setHasActedThisTurn(true);
+
+        String abilityName = ultimateName(faction);
+
+        if ("Tierras Perdidas".equals(faction)) {
+            targetRegion.setLives(0);
+            attackerRegion.setVictorias(attackerRegion.getVictorias() + 1);
+            state.getLog().add("⚡ " + attackerName + " activó [" + abilityName + "] sobre "
+                    + targetName + " — ¡ELIMINACIÓN INSTANTÁNEA!");
+            checkWinCondition(state);
+        } else {
+            int damage = ultimateDamage(faction);
+            int newLives = Math.max(0, targetRegion.getLives() - damage);
+            targetRegion.setLives(newLives);
+            state.getLog().add("⚡ " + attackerName + " activó [" + abilityName + "] sobre "
+                    + targetName + " (-" + damage + " vidas)!");
+            if (newLives == 0) {
+                attackerRegion.setVictorias(attackerRegion.getVictorias() + 1);
+                state.getLog().add("☠️ ¡La región de " + targetName + " ha sido destruida!");
+                checkWinCondition(state);
+            }
+        }
+
+        return state;
+    }
+
+    public GameState recall(String salaId, String playerName) {
+        GameState state = activeGames.get(salaId);
+        if (state == null || !"PLAYING".equals(state.getStatus())) return null;
+        if (!state.getCurrentTurnPlayer().equals(playerName)) return null;
+        if (state.isHasActedThisTurn()) return null;
+
+        GameState.RegionNodeState region = state.getRegions().get(playerName);
+        if (region == null || region.getLives() <= 0) return null;
+
+        String faction = region.getFaction();
+        if (!RECALL_FACTIONS.contains(faction)) return null;
+
+        int cost = "Tierras Perdidas".equals(faction) ? TP_ABILITY_COST : ABILITY_COST;
+        if (state.getCoins().getOrDefault(playerName, 0) < cost) return null;
+
+        state.getCoins().merge(playerName, -cost, Integer::sum);
+        state.setHasActedThisTurn(true);
+
+        region.setLives(region.getMaxLives());
+        state.getReinforceCount().remove(playerName); // reset reinforce failure too
+
+        String abilityName = recallName(faction);
+        state.getLog().add("✨ " + playerName + " activó [" + abilityName + "] — ¡Vidas restauradas al máximo!");
         return state;
     }
 
@@ -286,9 +358,28 @@ public class GameService {
             state.setRoundNumber(completedRound + 1);
             addRoundSummary(state, completedRound);
 
-            // Every 2 rounds, distribute items to all alive players
-            if (state.getRoundNumber() % 2 == 0) {
-                distributeItemsToAll(state);
+            boolean isEvenRound = (completedRound % 2 == 0);
+            boolean anyTP = false;
+
+            for (Map.Entry<String, GameState.RegionNodeState> entry : state.getRegions().entrySet()) {
+                String pName = entry.getKey();
+                GameState.RegionNodeState r = entry.getValue();
+                if (r.getLives() <= 0) continue;
+
+                boolean isTP = "Tierras Perdidas".equals(r.getFaction());
+                if (isTP) anyTP = true;
+
+                if (isTP || isEvenRound) {
+                    giveItemsToPlayer(state, pName);
+                }
+            }
+
+            if (isEvenRound && anyTP) {
+                state.getLog().add("🎴 ¡Han aparecido nuevos objetos para todos!");
+            } else if (isEvenRound) {
+                state.getLog().add("🎴 ¡Han aparecido nuevos objetos para todos!");
+            } else if (anyTP) {
+                state.getLog().add("✨ Las Tierras Perdidas convocan objetos místicos...");
             }
         }
 
@@ -303,12 +394,6 @@ public class GameService {
         state.getCoins().merge(nextPlayer, income, Integer::sum);
 
         state.getLog().add("🔄 Turno de " + nextPlayer + ". +" + income + "💰");
-
-        // Tierras Perdidas always gets item choices at start of their turn
-        if ("Tierras Perdidas".equals(nextFaction)) {
-            giveItemsToPlayer(state, nextPlayer);
-            state.getLog().add("✨ Las Tierras Perdidas invocan objetos místicos para " + nextPlayer + "...");
-        }
 
         return state;
     }
@@ -327,7 +412,7 @@ public class GameService {
 
         applyItemEffect(state, playerName, chosen);
         state.getPendingItemChoices().remove(playerName);
-        state.getPlayerItems().computeIfAbsent(playerName, k -> new ArrayList<>()).add(chosen.getName());
+        state.getPlayerItems().computeIfAbsent(playerName, k -> new ArrayList<>()).add(chosen);
 
         state.getLog().add("🎁 " + playerName + " adquirió " + chosen.getName() + " · " + chosen.getEffect());
         return state;
@@ -355,19 +440,8 @@ public class GameService {
         List<ItemTemplate> shuffled = new ArrayList<>(ITEM_CATALOG);
         Collections.shuffle(shuffled);
         List<GameState.ItemCard> offered = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            offered.add(shuffled.get(i).toCard());
-        }
+        for (int i = 0; i < 3; i++) offered.add(shuffled.get(i).toCard());
         state.getPendingItemChoices().put(playerName, offered);
-    }
-
-    private void distributeItemsToAll(GameState state) {
-        state.getRegions().forEach((playerName, region) -> {
-            if (region.getLives() > 0) {
-                giveItemsToPlayer(state, playerName);
-            }
-        });
-        state.getLog().add("🎴 ¡Han aparecido nuevos objetos! Cada jugador debe elegir uno.");
     }
 
     private void applyItemEffect(GameState state, String playerName, GameState.ItemCard item) {
@@ -379,9 +453,9 @@ public class GameService {
                     region.setLives(Math.min(region.getLives() + item.getValue(), region.getMaxLives()));
                 }
             }
-            case "coins"         -> state.getCoins().merge(playerName, item.getValue(), Integer::sum);
-            case "income"        -> state.getIncomeBonus().merge(playerName, item.getValue(), Integer::sum);
-            case "reinforce"     -> {
+            case "coins"          -> state.getCoins().merge(playerName, item.getValue(), Integer::sum);
+            case "income"         -> state.getIncomeBonus().merge(playerName, item.getValue(), Integer::sum);
+            case "reinforce"      -> {
                 if (region != null) {
                     region.setReinforceCost(Math.max(50, region.getReinforceCost() + item.getValue()));
                 }
@@ -390,7 +464,43 @@ public class GameService {
         }
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────────
+    // ── Ability name helpers ─────────────────────────────────────────────────────
+
+    private String ultimateName(String faction) {
+        return switch (faction) {
+            case "Noxus"            -> "Conquista Total";
+            case "Shadow Isles"     -> "Bruma Negra";
+            case "Void"             -> "Aniquilación del Vacío";
+            case "Shurima"          -> "Ascensión Solar";
+            case "Zaun"             -> "Virus Químico";
+            case "Bilgewater"       -> "Cañonazo Pirata";
+            case "Ixtal"            -> "Tormenta Elemental";
+            case "Tierras Perdidas" -> "Justicia Demaciana";
+            default                 -> "Ataque Definitivo";
+        };
+    }
+
+    private int ultimateDamage(String faction) {
+        return switch (faction) {
+            case "Void"                  -> 6;
+            case "Noxus", "Shadow Isles" -> 5;
+            default                      -> 4;
+        };
+    }
+
+    private String recallName(String faction) {
+        return switch (faction) {
+            case "Demacia"          -> "Muralla Demaciana";
+            case "Freljord"         -> "Glaciar Eterno";
+            case "Ionia"            -> "Equilibrio del Espíritu";
+            case "Piltover"         -> "Protocolo Hextech";
+            case "Targon"           -> "Bendición Celestial";
+            case "Tierras Perdidas" -> "Destino Maleable";
+            default                 -> "Restauración";
+        };
+    }
+
+    // ── Round helpers ────────────────────────────────────────────────────────────
 
     private void addRoundSummary(GameState state, int completedRound) {
         state.getLog().add("══════ RESUMEN RONDA " + completedRound + " ══════");
@@ -420,9 +530,7 @@ public class GameService {
                     .findFirst().orElse(null);
             state.setStatus("FINISHED");
             state.setWinner(winner);
-            if (winner != null) {
-                state.getLog().add("🏆 ¡" + winner + " ha conquistado Runaterra!");
-            }
+            if (winner != null) state.getLog().add("🏆 ¡" + winner + " ha conquistado Runaterra!");
         } else if (activePlayers == 0) {
             state.setStatus("FINISHED");
             state.getLog().add("¡Empate! Todos los jugadores han sido eliminados.");

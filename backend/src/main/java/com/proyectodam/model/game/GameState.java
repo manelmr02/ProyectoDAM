@@ -22,7 +22,7 @@ public class GameState {
     private Map<String, Integer> reinforceCount  = new HashMap<>();
     private Map<String, Integer> incomeBonus     = new HashMap<>();
     private Map<String, List<ItemCard>> pendingItemChoices = new LinkedHashMap<>();
-    private Map<String, List<String>> playerItems = new HashMap<>();
+    private Map<String, List<ItemCard>> playerItems = new HashMap<>();
 
     @Data
     public static class RegionNodeState {

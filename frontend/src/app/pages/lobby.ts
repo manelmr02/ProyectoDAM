@@ -375,7 +375,7 @@ export class Lobby implements OnInit, OnDestroy {
   notAuthenticated = signal(false);
   chatInput = '';
 
-  regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'The Void'];
+  regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'Void', 'Tierras Perdidas'];
 
   private timers: ReturnType<typeof setTimeout>[] = [];
   private wsSubscriptions: StompSubscription[] = [];
