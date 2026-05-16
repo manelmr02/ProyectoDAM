@@ -16,6 +16,7 @@ export interface UserStats {
 }
 
 export interface UserProfile {
+  id: string;
   username: string;
   email: string;
   clan: string;
@@ -153,6 +154,7 @@ export class AuthService {
       const defaults = generateDefaultProfile();
       const profile: UserProfile = {
         ...defaults,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
         clan: response.user.clan || defaults.faction!,
@@ -181,13 +183,19 @@ export class AuthService {
       localStorage.setItem('token', response.token);
       
       const defaults = generateDefaultProfile();
+      const localUsers = this.getUsers();
+      const localMatch = localUsers.find(u => u.username === response.user.username);
+
       const profile: UserProfile = {
         ...defaults,
+        ...localMatch,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
-        clan: response.user.clan || defaults.faction!,
-        avatarColor: response.user.avatarColor || defaults.avatarColor!,
-        bio: response.user.bio || defaults.bio!,
+        clan: response.user.clan || localMatch?.clan || defaults.faction!,
+        avatarColor: response.user.avatarColor || localMatch?.avatarColor || defaults.avatarColor!,
+        avatarImage: response.user.avatarImage || localMatch?.avatarImage,
+        bio: response.user.bio || localMatch?.bio || defaults.bio!,
         level: response.user.level || 1,
         stats: response.user.stats || defaults.stats!
       } as UserProfile;

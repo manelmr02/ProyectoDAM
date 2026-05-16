@@ -1,13 +1,15 @@
 package com.proyectodam.service;
 
 import com.proyectodam.model.mongo.PartidaMongo;
+import com.proyectodam.model.mongo.UsuarioMongo;
 import com.proyectodam.model.mysql.Partida;
 import com.proyectodam.model.mysql.Participante;
+import com.proyectodam.model.mysql.Region;
 import com.proyectodam.repository.mongo.PartidaMongoRepository;
+import com.proyectodam.repository.mongo.UsuarioMongoRepository;
 import com.proyectodam.repository.mysql.PartidaRepository;
 import com.proyectodam.repository.mysql.ParticipanteRepository;
 import com.proyectodam.repository.mysql.RegionRepository;
-import com.proyectodam.repository.mysql.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +26,7 @@ public class EstadisticasService {
     private final PartidaRepository partidaRepository;
     private final ParticipanteRepository participanteRepository;
     private final PartidaMongoRepository partidaMongoRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioMongoRepository usuarioMongoRepository;
     private final RegionRepository regionRepository;
 
     @Transactional(readOnly = true)
@@ -47,8 +50,11 @@ public class EstadisticasService {
             pm.setCreatedAt(partida.getCreatedAt());
             pm.setParticipantes(participantes.stream().map(p -> {
                 PartidaMongo.ParticipanteMongo pmo = new PartidaMongo.ParticipanteMongo();
-                pmo.setUsuarioId(p.getUsuario().getId());
-                pmo.setNickname(p.getUsuario().getNickname());
+                pmo.setUsuarioId(p.getUsuarioId());
+                
+                UsuarioMongo u = usuarioMongoRepository.findById(p.getUsuarioId()).orElse(null);
+                pmo.setNickname(u != null ? u.getNickname() : "Unknown");
+                
                 pmo.setRegionId(p.getRegion().getId());
                 pmo.setNombreRegion(p.getRegion().getNombre());
                 pmo.setTipoRegion(p.getRegion().getTipo());
@@ -72,21 +78,13 @@ public class EstadisticasService {
     }
 
     public Map<String, Object> usuarioTop() {
-        return usuarioRepository.findUsuariosOrdenadosPorVictorias()
-                .stream().findFirst()
-                .map(u -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", u.getId());
-                    map.put("nickname", u.getNickname());
-                    map.put("victorias", u.getRegiones().stream()
-                            .mapToInt(r -> r.getVictorias()).sum());
-                    return map;
-                })
-                .orElseGet(() -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("message", "No hay datos aún.");
-                    return map;
-                });
+        List<Map<String, Object>> ranking = rankingUsuarios();
+        if (ranking.isEmpty()) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("message", "No hay datos aún.");
+            return map;
+        }
+        return ranking.get(0);
     }
 
     public Map<String, Object> tipoRegionTop() {
@@ -102,16 +100,23 @@ public class EstadisticasService {
     }
 
     public List<Map<String, Object>> rankingUsuarios() {
-        return usuarioRepository.findUsuariosOrdenadosPorVictorias().stream()
-                .map(u -> {
+        // Obtenemos todas las regiones y sumamos victorias por usuarioId
+        List<Region> regiones = regionRepository.findAll();
+        Map<String, Integer> victoriasPorUsuario = regiones.stream()
+                .collect(Collectors.groupingBy(Region::getUsuarioId,
+                        Collectors.summingInt(Region::getVictorias)));
+
+        return victoriasPorUsuario.entrySet().stream()
+                .map(entry -> {
+                    UsuarioMongo u = usuarioMongoRepository.findById(entry.getKey()).orElse(null);
                     Map<String, Object> map = new HashMap<>();
-                    map.put("id", u.getId());
-                    map.put("nickname", u.getNickname());
-                    map.put("monedas", u.getMonedas());
-                    map.put("victorias", u.getRegiones().stream()
-                            .mapToInt(r -> r.getVictorias()).sum());
+                    map.put("id", entry.getKey());
+                    map.put("nickname", u != null ? u.getNickname() : "Unknown");
+                    map.put("monedas", u != null ? u.getMonedas() : 0);
+                    map.put("victorias", entry.getValue());
                     return map;
                 })
+                .sorted((a, b) -> (Integer) b.get("victorias") - (Integer) a.get("victorias"))
                 .toList();
     }
 

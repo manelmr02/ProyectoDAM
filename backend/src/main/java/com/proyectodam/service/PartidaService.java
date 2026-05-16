@@ -2,7 +2,9 @@ package com.proyectodam.service;
 
 import com.proyectodam.controllers.PartidaController.*;
 import com.proyectodam.exception.ResourceNotFoundException;
+import com.proyectodam.model.mongo.UsuarioMongo;
 import com.proyectodam.model.mysql.*;
+import com.proyectodam.repository.mongo.UsuarioMongoRepository;
 import com.proyectodam.repository.mysql.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,7 @@ public class PartidaService {
 
     private final PartidaRepository partidaRepository;
     private final ParticipanteRepository participanteRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioMongoRepository usuarioMongoRepository;
     private final RegionRepository regionRepository;
 
     @Transactional
@@ -30,16 +32,16 @@ public class PartidaService {
         partidaRepository.save(partida);
 
         for (ParticipanteDto dto : req.getParticipantes()) {
-            Usuario usuario = usuarioRepository.findById(dto.getUsuario().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Usuario no encontrado: " + dto.getUsuario().getId()));
-            Region region = regionRepository.findById(dto.getRegion().getId())
+            if (!usuarioMongoRepository.existsById(dto.getUsuario().getId())) {
+                throw new ResourceNotFoundException("Usuario no encontrado: " + dto.getUsuario().getId());
+            }
+            Region region = regionRepository.findById(Long.parseLong(dto.getRegion().getId()))
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Región no encontrada: " + dto.getRegion().getId()));
 
             Participante p = new Participante();
             p.setPartida(partida);
-            p.setUsuario(usuario);
+            p.setUsuarioId(dto.getUsuario().getId());
             p.setRegion(region);
             p.setVida(dto.getVida() != null ? dto.getVida() : 5);
             participanteRepository.save(p);
@@ -48,27 +50,27 @@ public class PartidaService {
     }
 
     @Transactional
-    public Map<String, Object> finalizarPartida(Long idPartida, Long idGanador, Long idPerdedor) {
+    public Map<String, Object> finalizarPartida(Long idPartida, String idGanador, String idPerdedor) {
         Partida partida = partidaRepository.findById(idPartida)
                 .orElseThrow(() -> new ResourceNotFoundException("Partida no encontrada: " + idPartida));
-        Usuario ganador = usuarioRepository.findById(idGanador)
+        UsuarioMongo ganador = usuarioMongoRepository.findById(idGanador)
                 .orElseThrow(() -> new ResourceNotFoundException("Ganador no encontrado: " + idGanador));
-        Usuario perdedor = usuarioRepository.findById(idPerdedor)
+        UsuarioMongo perdedor = usuarioMongoRepository.findById(idPerdedor)
                 .orElseThrow(() -> new ResourceNotFoundException("Perdedor no encontrado: " + idPerdedor));
 
-        partida.setEstado("FINALIZADO");           // RN-16.1
+        partida.setEstado("FINALIZADO");
         partidaRepository.save(partida);
 
-        ganador.setMonedas(ganador.getMonedas() + 200);  // RN-16.2
-        perdedor.setMonedas(perdedor.getMonedas() + 50); // RN-16.3
-        usuarioRepository.save(ganador);
-        usuarioRepository.save(perdedor);
+        ganador.setMonedas(ganador.getMonedas() + 200);
+        perdedor.setMonedas(perdedor.getMonedas() + 50);
+        usuarioMongoRepository.save(ganador);
+        usuarioMongoRepository.save(perdedor);
 
         participanteRepository.findByPartidaId(idPartida).forEach(p -> {
-            if (p.getUsuario().getId().equals(idGanador)) {
-                p.getRegion().setVictorias(p.getRegion().getVictorias() + 1); // RN-16.5
+            if (p.getUsuarioId().equals(idGanador)) {
+                p.getRegion().setVictorias(p.getRegion().getVictorias() + 1);
             } else {
-                p.getRegion().setVidas(Math.max(0, p.getRegion().getVidas() - 1)); // RN-16.4
+                p.getRegion().setVidas(Math.max(0, p.getRegion().getVidas() - 1));
             }
             regionRepository.save(p.getRegion());
         });
@@ -90,22 +92,22 @@ public class PartidaService {
         List<Participante> participantes = participanteRepository.findByPartidaId(idPartida);
 
         jugadores.forEach(jp -> {
-            Usuario usuario = usuarioRepository.findById(jp.getIdJugador())
+            UsuarioMongo usuario = usuarioMongoRepository.findById(jp.getIdJugador())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Usuario no encontrado: " + jp.getIdJugador()));
 
-            int premio = Math.max(0, 500 - 50 * (jp.getPosicion() - 1)); // RN-17.1
+            int premio = Math.max(0, 500 - 50 * (jp.getPosicion() - 1));
             usuario.setMonedas(usuario.getMonedas() + premio);
-            usuarioRepository.save(usuario);
+            usuarioMongoRepository.save(usuario);
 
             participantes.stream()
-                .filter(p -> p.getUsuario().getId().equals(jp.getIdJugador()))
+                .filter(p -> p.getUsuarioId().equals(jp.getIdJugador()))
                 .findFirst()
                 .ifPresent(p -> {
                     if (jp.getPosicion() == 1) {
-                        p.getRegion().setVictorias(p.getRegion().getVictorias() + 1); // RN-17.3
+                        p.getRegion().setVictorias(p.getRegion().getVictorias() + 1);
                     } else {
-                        p.getRegion().setVidas(Math.max(0, p.getRegion().getVidas() - 1)); // RN-17.2
+                        p.getRegion().setVidas(Math.max(0, p.getRegion().getVidas() - 1));
                     }
                     regionRepository.save(p.getRegion());
                 });

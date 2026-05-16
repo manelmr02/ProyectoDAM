@@ -57,5 +57,6 @@ export class App {
     this.auth.logout();
     this.showLogoutModal.set(false);
     this.isMobileMenuOpen.set(false);
+    this.router.navigate(['/login']);
   }
 }
