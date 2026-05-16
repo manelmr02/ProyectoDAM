@@ -6,13 +6,14 @@ import { WebSocketService } from '../services/websocket.service';
 import type { StompSubscription } from '@stomp/stompjs';
 
 interface RegionNode {
-  id: string;      // original player name (key into server regions map)
+  id: string;        // original player name (key into server regions map)
   name: string;
-  type: string;    // faction
+  type: string;      // faction
   owner: string;
   lives: number;
+  maxLives: number;
   victorias: number;
-  cost: number;
+  reinforceCost: number;
   icon: string;
   x: number;
   y: number;
@@ -88,7 +89,7 @@ const POSITIONS = [
           @if (selectedNode(); as node) {
             <div class="panel-section">
               <h2 [style.color]="node.color">{{ node.name }}</h2>
-              <p class="node-type">{{ node.type }} | Coste refuerzo: {{ node.cost }} 💰</p>
+              <p class="node-type">{{ node.type }} | Coste refuerzo: {{ node.reinforceCost }} 💰</p>
               <div class="node-description">
                 Controlada por <strong>{{ node.owner }}</strong>.
                 {{ node.owner === myName() ? 'Esta región es parte de tu territorio.' : 'Territorio hostil.' }}
@@ -107,9 +108,9 @@ const POSITIONS = [
                   @if (node.owner === myName()) {
                     <button
                       class="btn btn-secondary action-btn reinforce"
-                      [disabled]="coins() < node.cost || node.lives === 5"
+                      [disabled]="coins() < node.reinforceCost || node.lives >= node.maxLives"
                       (click)="reinforce(node)">
-                      🛡️ REFORZAR ({{ node.cost }}💰)
+                      🛡️ REFORZAR ({{ node.reinforceCost }}💰)
                     </button>
                   }
                 </div>
@@ -318,8 +319,9 @@ export class Battle implements OnInit, OnDestroy {
         type: r.faction ?? key,
         owner: r.owner ?? key,
         lives: r.lives ?? 0,
+        maxLives: r.maxLives ?? 10,
         victorias: r.victorias ?? 0,
-        cost: r.cost ?? 250,
+        reinforceCost: r.reinforceCost ?? 280,
         icon: r.icon ?? '🛡️',
         color: r.color ?? '#c89b3c',
         x: pos.x,

@@ -20,10 +20,11 @@ public class GameState {
     public static class RegionNodeState {
         private String owner;
         private int lives;
+        private int maxLives;
         private int victorias;
         private String faction;
         private String icon;
         private String color;
-        private int cost;
+        private int reinforceCost;
     }
 }

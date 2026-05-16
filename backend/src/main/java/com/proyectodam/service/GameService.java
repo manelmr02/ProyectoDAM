@@ -2,6 +2,8 @@ package com.proyectodam.service;
 
 import com.proyectodam.model.game.GameState;
 import com.proyectodam.model.mysql.SalaJugador;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -13,44 +15,60 @@ public class GameService {
 
     private final ConcurrentHashMap<String, GameState> activeGames = new ConcurrentHashMap<>();
 
-    private static final int INITIAL_COINS = 1000;
-    private static final int ATTACK_COST = 150;
-    private static final double ATTACK_SUCCESS_RATE = 0.6;
-    private static final int ATTACK_WIN_REWARD = 200;
-    private static final int ATTACK_LOSE_REWARD = 50;
-    private static final int TURN_INCOME = 100;
-    private static final int MAX_LIVES = 5;
+    private static final int    ATTACK_COST         = 150;
+    private static final double BASE_SUCCESS_RATE   = 0.50; // 50% base, faction bonus applied on top
+    private static final int    ATTACK_WIN_REWARD   = 200;
+    private static final int    ATTACK_LOSE_REWARD  = 50;
+    private static final int    WIN_LIVES_DAMAGE    = 2; // lives lost on successful attack
+    private static final int    LOSE_LIVES_DAMAGE   = 1; // lives lost on failed attack
 
-    private static final Map<String, String[]> FACTION_DATA = new LinkedHashMap<>();
-    private static final Map<String, Integer> FACTION_COST = new HashMap<>();
-
+    // ── Faction visual data ──────────────────────────────────────────────────────
+    private static final Map<String, String[]> FACTION_VISUAL = new LinkedHashMap<>();
     static {
-        FACTION_DATA.put("Demacia",      new String[]{"🛡️", "#c89b3c"});
-        FACTION_DATA.put("Noxus",        new String[]{"🪓", "#c0392b"});
-        FACTION_DATA.put("Freljord",     new String[]{"❄️", "#5dade2"});
-        FACTION_DATA.put("Ionia",        new String[]{"🌸", "#e91e8c"});
-        FACTION_DATA.put("Piltover",     new String[]{"⚙️", "#f39c12"});
-        FACTION_DATA.put("Zaun",         new String[]{"🧪", "#27ae60"});
-        FACTION_DATA.put("Shurima",      new String[]{"⏳", "#f1c40f"});
-        FACTION_DATA.put("Shadow Isles", new String[]{"👻", "#8e44ad"});
-        FACTION_DATA.put("Targon",       new String[]{"☀️", "#e8d5a3"});
-        FACTION_DATA.put("Bilgewater",   new String[]{"⚓", "#2980b9"});
-        FACTION_DATA.put("Ixtal",        new String[]{"🌿", "#1abc9c"});
-        FACTION_DATA.put("Void",         new String[]{"👾", "#9b59b6"});
-
-        FACTION_COST.put("Demacia", 200);
-        FACTION_COST.put("Noxus", 300);
-        FACTION_COST.put("Freljord", 300);
-        FACTION_COST.put("Ionia", 300);
-        FACTION_COST.put("Piltover", 350);
-        FACTION_COST.put("Zaun", 300);
-        FACTION_COST.put("Shurima", 300);
-        FACTION_COST.put("Shadow Isles", 400);
-        FACTION_COST.put("Targon", 400);
-        FACTION_COST.put("Bilgewater", 300);
-        FACTION_COST.put("Ixtal", 300);
-        FACTION_COST.put("Void", 500);
+        FACTION_VISUAL.put("Demacia",      new String[]{"🛡️", "#c89b3c"});
+        FACTION_VISUAL.put("Noxus",        new String[]{"🪓", "#c0392b"});
+        FACTION_VISUAL.put("Freljord",     new String[]{"❄️", "#5dade2"});
+        FACTION_VISUAL.put("Ionia",        new String[]{"🌸", "#e91e8c"});
+        FACTION_VISUAL.put("Piltover",     new String[]{"⚙️", "#f39c12"});
+        FACTION_VISUAL.put("Zaun",         new String[]{"🧪", "#27ae60"});
+        FACTION_VISUAL.put("Shurima",      new String[]{"⏳", "#f1c40f"});
+        FACTION_VISUAL.put("Shadow Isles", new String[]{"👻", "#8e44ad"});
+        FACTION_VISUAL.put("Targon",       new String[]{"☀️", "#e8d5a3"});
+        FACTION_VISUAL.put("Bilgewater",   new String[]{"⚓", "#2980b9"});
+        FACTION_VISUAL.put("Ixtal",        new String[]{"🌿", "#1abc9c"});
+        FACTION_VISUAL.put("Void",         new String[]{"👾", "#9b59b6"});
     }
+
+    // ── Per-faction game stats ───────────────────────────────────────────────────
+    @AllArgsConstructor @Getter
+    private static class FactionStats {
+        int    maxLives;
+        int    startCoins;
+        int    incomePerTurn;
+        double attackBonus;   // additive to BASE_SUCCESS_RATE, e.g. 0.15 → 65% success
+        int    reinforceCost;
+    }
+
+    private static final Map<String, FactionStats> FACTION_STATS = new LinkedHashMap<>();
+    static {
+        //                           lives startCoins income atkBonus reinforceCost
+        FACTION_STATS.put("Demacia",      new FactionStats(12, 1000, 100,  0.00, 200));
+        FACTION_STATS.put("Noxus",        new FactionStats( 8,  800, 100,  0.25, 300));
+        FACTION_STATS.put("Freljord",     new FactionStats(15,  700,  80, -0.10, 180));
+        FACTION_STATS.put("Ionia",        new FactionStats(10, 1000, 160,  0.00, 280));
+        FACTION_STATS.put("Piltover",     new FactionStats( 9, 1500, 160, -0.15, 350));
+        FACTION_STATS.put("Zaun",         new FactionStats(10,  900, 130,  0.10, 240));
+        FACTION_STATS.put("Shurima",      new FactionStats(10, 1000, 100,  0.15, 280));
+        FACTION_STATS.put("Shadow Isles", new FactionStats( 8,  700,  80,  0.30, 400));
+        FACTION_STATS.put("Targon",       new FactionStats(13,  800,  90,  0.00, 280));
+        FACTION_STATS.put("Bilgewater",   new FactionStats(10, 1200, 140,  0.10, 250));
+        FACTION_STATS.put("Ixtal",        new FactionStats(10, 1000, 150,  0.05, 240));
+        FACTION_STATS.put("Void",         new FactionStats( 6, 1500, 170,  0.35, 500));
+    }
+
+    private static final FactionStats DEFAULT_STATS = new FactionStats(10, 1000, 100, 0.0, 280);
+
+    // ── Public API ───────────────────────────────────────────────────────────────
 
     public GameState initOrGet(String salaId, List<SalaJugador> players) {
         return activeGames.computeIfAbsent(salaId, id -> createGame(id, players));
@@ -64,6 +82,8 @@ public class GameService {
         activeGames.remove(salaId);
     }
 
+    // ── Internal game creation ───────────────────────────────────────────────────
+
     private GameState createGame(String salaId, List<SalaJugador> players) {
         GameState state = new GameState();
         state.setSalaId(salaId);
@@ -76,19 +96,22 @@ public class GameService {
 
         for (SalaJugador player : players) {
             String name = player.getNombre();
-            state.getCoins().put(name, INITIAL_COINS);
+            String faction = player.getFaction() != null ? player.getFaction() : "Demacia";
+            FactionStats stats = FACTION_STATS.getOrDefault(faction, DEFAULT_STATS);
+
+            state.getCoins().put(name, stats.getStartCoins());
 
             GameState.RegionNodeState region = new GameState.RegionNodeState();
             region.setOwner(name);
-            region.setLives(MAX_LIVES);
+            region.setMaxLives(stats.getMaxLives());
+            region.setLives(stats.getMaxLives());
             region.setVictorias(0);
-
-            String faction = player.getFaction() != null ? player.getFaction() : "Demacia";
             region.setFaction(faction);
-            String[] fd = FACTION_DATA.getOrDefault(faction, new String[]{"🛡️", "#c89b3c"});
-            region.setIcon(fd[0]);
-            region.setColor(fd[1]);
-            region.setCost(FACTION_COST.getOrDefault(faction, 250));
+            region.setReinforceCost(stats.getReinforceCost());
+
+            String[] vis = FACTION_VISUAL.getOrDefault(faction, new String[]{"🛡️", "#c89b3c"});
+            region.setIcon(vis[0]);
+            region.setColor(vis[1]);
 
             state.getRegions().put(name, region);
         }
@@ -96,6 +119,8 @@ public class GameService {
         state.getLog().add("¡La batalla de Runaterra ha comenzado!");
         return state;
     }
+
+    // ── Actions ──────────────────────────────────────────────────────────────────
 
     public GameState attack(String salaId, String attackerName, String targetName) {
         GameState state = activeGames.get(salaId);
@@ -105,25 +130,40 @@ public class GameService {
         if (state.getCoins().getOrDefault(attackerName, 0) < ATTACK_COST) return null;
 
         GameState.RegionNodeState targetRegion = state.getRegions().get(targetName);
-        if (targetRegion == null || targetRegion.getOwner().equals(attackerName)) return null;
+        if (targetRegion == null || targetName.equals(attackerName)) return null;
+        if (targetRegion.getLives() <= 0) return null; // can't attack already-dead region
+
+        // Attacker's faction determines success rate
+        GameState.RegionNodeState attackerRegion = state.getRegions().get(attackerName);
+        String attackerFaction = attackerRegion != null ? attackerRegion.getFaction() : "Demacia";
+        FactionStats attackerStats = FACTION_STATS.getOrDefault(attackerFaction, DEFAULT_STATS);
+        double successRate = Math.min(0.9, Math.max(0.1, BASE_SUCCESS_RATE + attackerStats.getAttackBonus()));
 
         state.getCoins().merge(attackerName, -ATTACK_COST, Integer::sum);
 
-        boolean win = Math.random() < ATTACK_SUCCESS_RATE;
+        boolean win = Math.random() < successRate;
+        int damage = win ? WIN_LIVES_DAMAGE : LOSE_LIVES_DAMAGE;
+        int reward = win ? ATTACK_WIN_REWARD : ATTACK_LOSE_REWARD;
+
+        state.getCoins().merge(attackerName, reward, Integer::sum);
+        int newLives = Math.max(0, targetRegion.getLives() - damage);
+        targetRegion.setLives(newLives);
+
         if (win) {
-            state.getCoins().merge(attackerName, ATTACK_WIN_REWARD, Integer::sum);
-            String oldOwner = targetRegion.getOwner();
-            targetRegion.setOwner(attackerName);
-            targetRegion.setVictorias(targetRegion.getVictorias() + 1);
-            state.getLog().add(attackerName + " conquistó la región de " + oldOwner + "! +200💰");
+            state.getLog().add(attackerName + " lanzó un ataque devastador a " + targetName
+                    + "! (-" + damage + " vidas). +200💰");
         } else {
-            state.getCoins().merge(attackerName, ATTACK_LOSE_REWARD, Integer::sum);
-            int newLives = Math.max(0, targetRegion.getLives() - 1);
-            targetRegion.setLives(newLives);
-            state.getLog().add(attackerName + " atacó a " + targetName + " pero falló. " + targetName + " pierde 1 vida. +50💰");
+            state.getLog().add(attackerName + " atacó a " + targetName
+                    + " pero fue repelido (-" + damage + " vida). +50💰");
         }
 
-        checkWinCondition(state);
+        if (newLives == 0) {
+            attackerRegion.setVictorias(attackerRegion.getVictorias() + 1);
+            state.getLog().add("☠️ ¡La región de " + targetName + " ha sido destruida! "
+                    + attackerName + " gana 1 victoria.");
+            checkWinCondition(state);
+        }
+
         return state;
     }
 
@@ -134,13 +174,15 @@ public class GameService {
 
         GameState.RegionNodeState region = state.getRegions().get(targetKey);
         if (region == null || !region.getOwner().equals(playerName)) return null;
+        if (region.getLives() <= 0) return null; // can't reinforce a dead region
+        if (region.getLives() >= region.getMaxLives()) return null; // already full
 
-        int cost = region.getCost();
+        int cost = region.getReinforceCost();
         if (state.getCoins().getOrDefault(playerName, 0) < cost) return null;
 
         state.getCoins().merge(playerName, -cost, Integer::sum);
-        region.setLives(MAX_LIVES);
-        state.getLog().add(playerName + " reforzó su región al máximo. -" + cost + "💰");
+        region.setLives(region.getMaxLives());
+        state.getLog().add(playerName + " reforzó su región al máximo (" + region.getMaxLives() + " vidas). -" + cost + "💰");
 
         return state;
     }
@@ -152,32 +194,55 @@ public class GameService {
 
         List<String> order = state.getTurnOrder();
         int currentIdx = order.indexOf(playerName);
-        int nextIdx = (currentIdx + 1) % order.size();
-        String nextPlayer = order.get(nextIdx);
 
+        // Skip over eliminated players
+        int nextIdx = (currentIdx + 1) % order.size();
+        int tries = 0;
+        while (tries < order.size()) {
+            String candidate = order.get(nextIdx);
+            GameState.RegionNodeState candidateRegion = state.getRegions().get(candidate);
+            if (candidateRegion != null && candidateRegion.getLives() > 0) break;
+            nextIdx = (nextIdx + 1) % order.size();
+            tries++;
+        }
+
+        String nextPlayer = order.get(nextIdx);
         state.setCurrentTurnPlayer(nextPlayer);
-        if (nextIdx == 0) {
+
+        if (nextIdx <= currentIdx) {
             state.setRoundNumber(state.getRoundNumber() + 1);
         }
 
-        state.getCoins().merge(nextPlayer, TURN_INCOME, Integer::sum);
-        state.getLog().add(playerName + " finalizó su turno. Turno de " + nextPlayer + ". +" + TURN_INCOME + "💰");
+        // Give income based on the NEXT player's faction
+        GameState.RegionNodeState nextRegion = state.getRegions().get(nextPlayer);
+        String nextFaction = nextRegion != null ? nextRegion.getFaction() : "Demacia";
+        FactionStats nextStats = FACTION_STATS.getOrDefault(nextFaction, DEFAULT_STATS);
+        int income = nextStats.getIncomePerTurn();
+
+        state.getCoins().merge(nextPlayer, income, Integer::sum);
+        state.getLog().add(playerName + " finalizó su turno. Turno de " + nextPlayer + ". +" + income + "💰");
 
         return state;
     }
 
-    private void checkWinCondition(GameState state) {
-        Set<String> activeOwners = state.getRegions().values().stream()
-                .filter(r -> r.getLives() > 0)
-                .map(GameState.RegionNodeState::getOwner)
-                .collect(Collectors.toSet());
+    // ── Win condition ────────────────────────────────────────────────────────────
 
-        if (activeOwners.size() == 1) {
-            String winner = activeOwners.iterator().next();
+    private void checkWinCondition(GameState state) {
+        long activePlayers = state.getRegions().values().stream()
+                .filter(r -> r.getLives() > 0)
+                .count();
+
+        if (activePlayers == 1) {
+            String winner = state.getRegions().values().stream()
+                    .filter(r -> r.getLives() > 0)
+                    .map(GameState.RegionNodeState::getOwner)
+                    .findFirst().orElse(null);
             state.setStatus("FINISHED");
             state.setWinner(winner);
-            state.getLog().add("🏆 ¡" + winner + " ha ganado la batalla de Runaterra!");
-        } else if (activeOwners.isEmpty()) {
+            if (winner != null) {
+                state.getLog().add("🏆 ¡" + winner + " ha conquistado Runaterra!");
+            }
+        } else if (activePlayers == 0) {
             state.setStatus("FINISHED");
             state.getLog().add("¡Empate! Todos los jugadores han sido eliminados.");
         }

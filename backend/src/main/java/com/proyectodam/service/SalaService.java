@@ -87,4 +87,14 @@ public class SalaService {
                 });
         return salaRepository.findById(salaId).orElse(null);
     }
+
+    @Transactional
+    public Sala cambiarFaccion(Long salaId, String nombreUsuario, String faccion) {
+        salaJugadorRepository.findBySala_IdAndNombre(salaId, nombreUsuario)
+                .ifPresent(j -> {
+                    j.setFaction(faccion);
+                    salaJugadorRepository.save(j);
+                });
+        return salaRepository.findById(salaId).orElse(null);
+    }
 }

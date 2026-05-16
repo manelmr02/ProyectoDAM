@@ -10,6 +10,7 @@ import { Terms } from './pages/terms';
 import { Privacy } from './pages/privacy';
 import { Rules } from './pages/rules';
 import { Support } from './pages/support';
+import { Factions } from './pages/factions';
 
 export const routes: Routes = [
   { path: '',              component: Home },
@@ -20,6 +21,7 @@ export const routes: Routes = [
   { path: 'battle/:id',    component: Battle },
   { path: 'ranking',       component: Ranking },
   { path: 'profile',       component: Profile },
+  { path: 'regiones',      component: Factions },
   { path: 'terms',         component: Terms },
   { path: 'privacy',       component: Privacy },
   { path: 'rules',         component: Rules },

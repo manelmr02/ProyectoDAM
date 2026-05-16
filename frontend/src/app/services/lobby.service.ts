@@ -198,8 +198,9 @@ export class LobbyService {
     return updated;
   }
 
-  async changePlayerFaction(lobbyId: string | number, playerName: string, newFaction: string, level: number) {
-    // Implementar si es necesario un endpoint específico, o re-unirse con nuevos datos
-    this.refreshLobbies();
+  async changePlayerFaction(lobbyId: string | number, playerName: string, newFaction: string, _level: number) {
+    await firstValueFrom(
+      this.http.put<any>(`${this.API_URL}/${lobbyId}/faccion?username=${encodeURIComponent(playerName)}&faccion=${encodeURIComponent(newFaction)}`, {})
+    );
   }
 }

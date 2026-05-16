@@ -65,6 +65,15 @@ public class SalaController {
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/faccion")
+    public ResponseEntity<Sala> cambiarFaccion(@PathVariable Long id,
+                                               @RequestParam String username,
+                                               @RequestParam String faccion) {
+        Sala sala = salaService.cambiarFaccion(id, username, faccion);
+        if (sala != null) broadcast(id, sala);
+        return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.notFound().build();
+    }
+
     @PutMapping("/{id}/estado")
     public ResponseEntity<Sala> actualizarEstado(@PathVariable Long id,
                                                   @RequestParam String username,
