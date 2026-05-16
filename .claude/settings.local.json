@@ -5,7 +5,8 @@
       "Bash(Remove-Item \"c:\\\\Users\\\\manel\\\\Desktop\\\\2ºDAM\\\\Proyecto\\\\ProyectoDAM\\\\backend\\\\src\\\\main\\\\java\\\\com\\\\proyectodam\\\\model\\\\mongo\\\\SalaMongo.java\" -Force)",
       "Bash(Remove-Item \"c:\\\\Users\\\\manel\\\\Desktop\\\\2ºDAM\\\\Proyecto\\\\ProyectoDAM\\\\backend\\\\src\\\\main\\\\java\\\\com\\\\proyectodam\\\\repository\\\\mongo\\\\UsuarioMongoRepository.java\" -Force)",
       "Bash(Remove-Item \"c:\\\\Users\\\\manel\\\\Desktop\\\\2ºDAM\\\\Proyecto\\\\ProyectoDAM\\\\backend\\\\src\\\\main\\\\java\\\\com\\\\proyectodam\\\\repository\\\\mongo\\\\SalaMongoRepository.java\" -Force)",
-      "Bash(Write-Host \"Done\")"
+      "Bash(Write-Host \"Done\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\manel\\\\Desktop\\\\2ºDAM\\\\Proyecto\\\\ProyectoDAM\" -Directory)"
     ]
   }
 }

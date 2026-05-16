@@ -48,6 +48,46 @@ export class WebSocketService {
     });
   }
 
+  // --- Game (partida) methods ---
+
+  subscribeToPartida(salaId: string, callback: (state: any) => void): StompSubscription {
+    return this.client.subscribe(`/topic/partida/${salaId}`, msg => {
+      callback(JSON.parse(msg.body));
+    });
+  }
+
+  joinGame(salaId: string, player: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/join`,
+      body: JSON.stringify({ type: 'JOIN', player })
+    });
+  }
+
+  sendAttack(salaId: string, player: string, target: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/attack`,
+      body: JSON.stringify({ type: 'ATTACK', player, target })
+    });
+  }
+
+  sendReinforce(salaId: string, player: string, target: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/reinforce`,
+      body: JSON.stringify({ type: 'REINFORCE', player, target })
+    });
+  }
+
+  sendEndTurn(salaId: string, player: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/endTurn`,
+      body: JSON.stringify({ type: 'END_TURN', player })
+    });
+  }
+
   disconnect(): void {
     if (this.client.active) {
       this.client.deactivate();
