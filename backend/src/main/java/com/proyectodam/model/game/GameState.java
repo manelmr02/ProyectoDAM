@@ -15,6 +15,8 @@ public class GameState {
     private String status = "PLAYING"; // PLAYING, FINISHED
     private String winner;
     private List<String> log = new ArrayList<>();
+    private boolean hasActedThisTurn = false;
+    private Long turnStartTime;
 
     @Data
     public static class RegionNodeState {
