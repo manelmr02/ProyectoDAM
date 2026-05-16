@@ -8,19 +8,6 @@ import { ProfanityService } from '../services/profanity.service';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
-// NPC phrases for random chat simulation
-const PHRASES: { sender: string; text: string }[] = [
-  { sender: 'YasuoMain', text: 'La muerte es como el viento...' },
-  { sender: 'GarenGamer', text: '¡Por Demacia!' },
-  { sender: 'JinxEnjoyer', text: '¡Reglas hechas para romperse!' },
-  { sender: 'TeemoGod', text: 'Tamaño no lo es todo.' },
-  { sender: 'ZedPlayer', text: 'Las sombras me iluminan.' },
-  { sender: 'DarkPhoenix', text: 'Primera vez, pero no seré el último.' },
-  { sender: 'AhriFan', text: '¿No confías en mí?' },
-  { sender: 'ShadowMind', text: '...' },
-  { sender: 'NovaCaptain', text: '¿Invadimos o esperamos?' },
-  { sender: 'FrostWarden', text: 'Silencio antes de la tormenta.' },
-];
 
 @Component({
   selector: 'app-lobby',
@@ -389,6 +376,7 @@ export class Lobby implements OnInit, OnDestroy {
 
 
   private timers: ReturnType<typeof setTimeout>[] = [];
+  private pollId: any = null;
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
 
@@ -462,6 +450,22 @@ export class Lobby implements OnInit, OnDestroy {
       if (me) {
         this.isReady.set(me.status === 'Ready');
       }
+
+      // Polling para sincronizar el estado de otros jugadores cada 3s
+      this.pollId = setInterval(async () => {
+        const current = this.lobby();
+        if (!current) return;
+        const refreshed = await this.lobbyService.getLobbyById(current.id);
+        if (!refreshed) return;
+        // Preservar startReadyTime local si ya estaba activo
+        if (current.startReadyTime && !refreshed.startReadyTime) {
+          refreshed.startReadyTime = current.startReadyTime;
+        }
+        this.lobby.set(refreshed);
+        // Sincronizar isReady con el estado real del servidor
+        const meRefreshed = refreshed.playerList.find(p => p.name === this.myName());
+        if (meRefreshed) this.isReady.set(meRefreshed.status === 'Ready');
+      }, 3000);
     });
   }
 
@@ -485,6 +489,7 @@ export class Lobby implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.timers.forEach(t => clearTimeout(t));
+    if (this.pollId) clearInterval(this.pollId);
     this.stopCountdown();
 
     // If the user navigates away while ready, cancel their ready state
@@ -499,9 +504,9 @@ export class Lobby implements OnInit, OnDestroy {
     if (!l) return;
     this.isReady.update(v => !v);
     const newStatus = this.isReady() ? 'Ready' : 'Waiting';
-    await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
-    const updated = await this.lobbyService.getLobbyById(l.id);
-    this.lobby.set(updated ?? null);
+    // Usamos el resultado directo para preservar startReadyTime
+    const updated = await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
+    if (updated) this.lobby.set(updated);
     this.addSystem(this.isReady()
       ? `${this.myName()} está LISTO.`
       : `${this.myName()} canceló el estado listo.`
