@@ -67,4 +67,16 @@ public class GameWebSocketController {
         GameState state = gameService.endTurn(id, action.getPlayer());
         if (state != null) broadcast(id, state);
     }
+
+    @MessageMapping("/partida/{id}/selectItem")
+    public void selectItem(@DestinationVariable String id, GameAction action) {
+        GameState state = gameService.selectItem(id, action.getPlayer(), action.getTarget());
+        if (state != null) broadcast(id, state);
+    }
+
+    @MessageMapping("/partida/{id}/surrender")
+    public void surrender(@DestinationVariable String id, GameAction action) {
+        GameState state = gameService.surrender(id, action.getPlayer());
+        if (state != null) broadcast(id, state);
+    }
 }

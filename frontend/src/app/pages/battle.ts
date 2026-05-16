@@ -20,15 +20,21 @@ interface RegionNode {
   color: string;
 }
 
-interface LogEntry { time: string; text: string; isSummary: boolean; }
+interface LogEntry  { time: string; text: string; isSummary: boolean; }
+interface ItemCard  { id: string; name: string; effect: string; iconId: number; type: string; value: number; }
 
 const POSITIONS = [
   { x: 18, y: 25 }, { x: 72, y: 25 },
   { x: 18, y: 68 }, { x: 72, y: 68 },
   { x: 45, y: 12 }, { x: 45, y: 80 },
-  { x: 45, y: 46 }, { x: 80, y: 46 }
+  { x: 45, y: 46 }, { x: 80, y: 46 },
+  { x: 30, y: 46 }, { x: 60, y: 36 },
+  { x: 12, y: 55 }, { x: 88, y: 55 },
+  { x: 60, y: 60 }, { x: 30, y: 15 }
 ];
-const TURN_SECONDS = 60;
+const TURN_SECONDS   = 60;
+const ITEM_CDN       = 'https://ddragon.leagueoflegends.com/cdn/14.3.1/img/item/';
+const ITEM_FALLBACK  = 'https://placehold.co/64x64/1a1a2e/c89b3c?text=?';
 
 @Component({
   selector: 'app-battle',
@@ -55,7 +61,7 @@ const TURN_SECONDS = 60;
         </div>
         <div class="header-right">
           <div class="user-coins">💰 {{ coins() }}</div>
-          <button class="btn btn-ff" (click)="surrender()">SALIR</button>
+          <button class="btn-exit" (click)="showSurrenderModal.set(true)">SALIR</button>
         </div>
       </div>
 
@@ -65,9 +71,7 @@ const TURN_SECONDS = 60;
           <div class="map-canvas">
             @for (node of regions(); track node.id) {
               <div class="map-node-wrapper" [style.left.%]="node.x" [style.top.%]="node.y">
-
                 <div class="player-label" [style.color]="node.color">{{ node.name }}</div>
-
                 <div class="map-node"
                      [class.selected]="selectedId() === node.id"
                      [class.dead]="node.lives === 0"
@@ -75,18 +79,14 @@ const TURN_SECONDS = 60;
                      [style.--node-color]="node.color"
                      (click)="selectNode(node)">
                   <span class="node-icon">{{ node.icon }}</span>
-                  @if (node.lives === 0) {
-                    <span class="dead-skull">☠️</span>
-                  }
+                  @if (node.lives === 0) { <span class="dead-skull">☠️</span> }
                 </div>
-
                 <div class="node-info">
                   <div class="node-faction">{{ node.type }}</div>
                   <div class="node-lives-bar">
                     <div class="node-lives-fill"
                          [style.width.%]="node.lives / node.maxLives * 100"
-                         [style.background]="livesColor(node)">
-                    </div>
+                         [style.background]="livesColor(node)"></div>
                   </div>
                   <div class="node-stats-row">
                     <span [class.crit]="node.lives / node.maxLives < 0.3">🛡️{{ node.lives }}/{{ node.maxLives }}</span>
@@ -115,8 +115,7 @@ const TURN_SECONDS = 60;
                 <div class="lives-bar-big">
                   <div class="lives-bar-fill"
                        [style.width.%]="node.lives / node.maxLives * 100"
-                       [style.background]="livesColor(node)">
-                  </div>
+                       [style.background]="livesColor(node)"></div>
                 </div>
                 <span class="lives-text" [class.crit]="node.lives / node.maxLives < 0.3">
                   🛡️ {{ node.lives }} / {{ node.maxLives }} vidas
@@ -142,6 +141,11 @@ const TURN_SECONDS = 60;
                             (click)="reinforce(node)">
                       🔧 REFORZAR ({{ node.reinforceCost }}💰)
                     </button>
+                    @if (node.owner === myName() && node.lives < node.maxLives) {
+                      <div class="reinforce-fail-info" [class.warn]="reinforcePct() >= 40" [class.danger]="reinforcePct() >= 60">
+                        Prob. de fallo: {{ reinforcePct() }}%
+                      </div>
+                    }
                   }
                 </div>
               }
@@ -149,11 +153,9 @@ const TURN_SECONDS = 60;
               @if (isMyTurn() && hasActed()) {
                 <div class="action-done">✅ Acción realizada. Finaliza tu turno.</div>
               }
-
               @if (!isMyTurn()) {
                 <div class="waiting-turn">Espera tu turno...</div>
               }
-
               @if (node.lives === 0) {
                 <div class="dead-notice">☠️ Esta región ha sido eliminada.</div>
               }
@@ -186,7 +188,52 @@ const TURN_SECONDS = 60;
         </div>
       </div>
 
-      <!-- Game over overlay -->
+      <!-- ── ITEM SELECTION MODAL ── -->
+      @if (pendingItems()) {
+        <div class="modal-overlay">
+          <div class="item-modal glass-panel">
+            <div class="item-modal-header">
+              <div class="item-modal-title">🎴 ¡Elige tu objeto!</div>
+              <div class="item-modal-sub">Selecciona un objeto para potenciar tu facción.</div>
+            </div>
+            <div class="item-cards-row">
+              @for (item of pendingItems()!; track item.id) {
+                <div class="item-card glass-panel" (click)="selectItem(item)">
+                  <img class="item-icon"
+                       [src]="ITEM_CDN + item.iconId + '.png'"
+                       [alt]="item.name"
+                       (error)="$any($event.target).src = ITEM_FALLBACK">
+                  <div class="item-name">{{ item.name }}</div>
+                  <div class="item-effect" [class.effect-lives]="item.type === 'lives'"
+                                           [class.effect-coins]="item.type === 'coins'"
+                                           [class.effect-income]="item.type === 'income'"
+                                           [class.effect-reinforce]="item.type === 'reinforce'"
+                                           [class.effect-reset]="item.type === 'resetReinforce'">
+                    {{ item.effect }}
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── SURRENDER CONFIRMATION MODAL ── -->
+      @if (showSurrenderModal()) {
+        <div class="modal-overlay">
+          <div class="confirm-modal glass-panel">
+            <div class="confirm-icon">🏳️</div>
+            <h3>¿Seguro que quieres rendirte?</h3>
+            <p>Tu región será eliminada y el resto de jugadores serán notificados.</p>
+            <div class="confirm-buttons">
+              <button class="btn btn-surrender-confirm" (click)="confirmSurrender()">Rendirse</button>
+              <button class="btn btn-secondary" (click)="showSurrenderModal.set(false)">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── GAME OVER OVERLAY ── -->
       @if (gameOver()) {
         <div class="game-over-overlay">
           <div class="game-over-panel glass-panel">
@@ -206,9 +253,9 @@ const TURN_SECONDS = 60;
 
     /* ── Header ── */
     .battle-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; gap: 12px; flex-wrap: wrap; }
-    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-left   { display: flex; align-items: center; gap: 16px; }
     .header-center { display: flex; align-items: center; gap: 12px; }
-    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-right  { display: flex; align-items: center; gap: 12px; }
 
     .turn-indicator {
       padding: 6px 14px; border-radius: 20px; background: rgba(0,0,0,0.4);
@@ -230,9 +277,9 @@ const TURN_SECONDS = 60;
     .timer-icon { font-size: 0.9rem; }
 
     .round-badge { padding: 4px 12px; border-radius: 20px; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: var(--accent-primary); font-size: 0.75rem; font-weight: 700; }
-
-    .user-coins { font-weight: 700; color: var(--accent-gold); font-size: 1rem; }
-    .btn-ff { font-size: 0.72rem; padding: 5px 10px; border: 1px solid rgba(239,68,68,0.4); color: #ef4444; background: transparent; border-radius: 6px; cursor: pointer; }
+    .user-coins  { font-weight: 700; color: var(--accent-gold); font-size: 1rem; }
+    .btn-exit    { font-size: 0.72rem; padding: 5px 10px; border: 1px solid rgba(239,68,68,0.4); color: #ef4444; background: transparent; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+    .btn-exit:hover { background: rgba(239,68,68,0.12); }
     .hide-sm { font-size: 1rem; }
 
     /* ── Layout ── */
@@ -240,19 +287,17 @@ const TURN_SECONDS = 60;
 
     /* ── Map ── */
     .map-viewport { position: relative; background: rgba(0,0,0,0.4); overflow: hidden; }
-    .map-canvas { position: relative; width: 100%; height: 100%; min-height: 620px; }
+    .map-canvas   { position: relative; width: 100%; height: 100%; min-height: 620px; }
 
     .map-node-wrapper {
       position: absolute; display: flex; flex-direction: column; align-items: center;
       gap: 4px; transform: translate(-50%, -50%); cursor: pointer;
     }
-
     .player-label {
       background: rgba(0,0,0,0.85); padding: 2px 10px; border-radius: 4px;
       font-size: 0.7rem; font-weight: 800; text-transform: uppercase; white-space: nowrap;
       border: 1px solid rgba(255,255,255,0.08);
     }
-
     .map-node {
       width: 68px; height: 68px; border-radius: 50%;
       border: 3px solid var(--node-color, #888);
@@ -261,45 +306,53 @@ const TURN_SECONDS = 60;
       transition: transform 0.15s, box-shadow 0.15s;
       box-shadow: 0 0 8px color-mix(in srgb, var(--node-color, #888) 40%, transparent);
     }
-    .map-node:hover { transform: scale(1.12); }
+    .map-node:hover  { transform: scale(1.12); }
     .map-node.selected {
       transform: scale(1.18);
       box-shadow: 0 0 0 3px var(--node-color, #888), 0 0 20px color-mix(in srgb, var(--node-color, #888) 60%, transparent);
     }
-    .map-node.my-node { border-width: 3px; }
-    .map-node.dead { opacity: 0.3; filter: grayscale(1); cursor: default; transform: scale(1) !important; }
-    .node-icon { font-size: 2rem; line-height: 1; }
-    .dead-skull { position: absolute; font-size: 1.2rem; top: -4px; right: -4px; }
+    .map-node.dead   { opacity: 0.3; filter: grayscale(1); cursor: default; transform: scale(1) !important; }
+    .node-icon       { font-size: 2rem; line-height: 1; }
+    .dead-skull      { position: absolute; font-size: 1.2rem; top: -4px; right: -4px; }
 
-    .node-info { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 80px; }
-    .node-faction { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; opacity: 0.7; white-space: nowrap; }
-    .node-lives-bar { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-    .node-lives-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-    .node-stats-row { display: flex; gap: 8px; font-size: 0.62rem; font-weight: 700; }
+    .node-info        { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 80px; }
+    .node-faction     { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; opacity: 0.7; white-space: nowrap; }
+    .node-lives-bar   { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .node-lives-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .node-stats-row   { display: flex; gap: 8px; font-size: 0.62rem; font-weight: 700; }
     .node-stats-row .crit { color: #ef4444; }
 
     /* ── Command Center ── */
     .command-center { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
-    .panel-section { display: flex; flex-direction: column; gap: 10px; }
+    .panel-section  { display: flex; flex-direction: column; gap: 10px; }
 
-    .node-header { display: flex; align-items: center; gap: 12px; }
+    .node-header      { display: flex; align-items: center; gap: 12px; }
     .node-header-icon { font-size: 2.2rem; flex-shrink: 0; }
-    .node-header h2 { font-size: 1.2rem; margin: 0; }
+    .node-header h2   { font-size: 1.2rem; margin: 0; }
     .node-faction-label { font-size: 0.78rem; color: var(--accent-secondary); font-weight: 700; margin: 0; }
 
-    .lives-display { display: flex; flex-direction: column; gap: 4px; }
-    .lives-bar-big { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+    .lives-display  { display: flex; flex-direction: column; gap: 4px; }
+    .lives-bar-big  { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
     .lives-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
-    .lives-text { font-size: 0.82rem; font-weight: 700; }
+    .lives-text     { font-size: 0.82rem; font-weight: 700; }
     .lives-text.crit { color: #ef4444; }
 
-    .node-owner { font-size: 0.8rem; color: var(--text-muted); padding: 4px 0; }
+    .node-owner  { font-size: 0.8rem; color: var(--text-muted); padding: 4px 0; }
 
     .action-grid { display: flex; flex-direction: column; gap: 8px; }
-    .btn-attack  { padding: 12px; width: 100%; background: linear-gradient(135deg,#ef4444,#991b1b); color:#fff; border:none; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.88rem; transition:opacity .2s; }
-    .btn-attack:disabled  { opacity:.4; cursor:not-allowed; }
+    .btn-attack    { padding: 12px; width: 100%; background: linear-gradient(135deg,#ef4444,#991b1b); color:#fff; border:none; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.88rem; transition:opacity .2s; }
+    .btn-attack:disabled { opacity:.4; cursor:not-allowed; }
     .btn-reinforce { padding: 12px; width: 100%; background: linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.88rem; transition:opacity .2s; }
     .btn-reinforce:disabled { opacity:.4; cursor:not-allowed; }
+
+    .reinforce-fail-info {
+      font-size: 0.75rem; font-weight: 700; text-align: center;
+      padding: 4px 8px; border-radius: 6px;
+      background: rgba(255,255,255,0.04); color: var(--text-muted);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .reinforce-fail-info.warn   { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+    .reinforce-fail-info.danger { color: #ef4444; border-color: rgba(239,68,68,0.3);  background: rgba(239,68,68,0.08); }
 
     .action-done  { padding: 10px 12px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius:8px; color:#10b981; font-size:0.82rem; font-weight:700; text-align:center; }
     .waiting-turn { padding: 10px 12px; background: rgba(0,0,0,0.2); border-radius:8px; color:var(--text-muted); font-size:0.82rem; text-align:center; font-style:italic; }
@@ -309,9 +362,9 @@ const TURN_SECONDS = 60;
     .hint-icon { font-size:2.5rem; opacity:.15; margin-bottom:10px; }
 
     /* ── Log ── */
-    .battle-log { flex:1; display:flex; flex-direction:column; gap:8px; min-height:0; }
+    .battle-log   { flex:1; display:flex; flex-direction:column; gap:8px; min-height:0; }
     .battle-log h3 { font-size:0.75rem; color:var(--accent-gold); opacity:.8; text-transform:uppercase; letter-spacing:.05em; }
-    .log-entries {
+    .log-entries  {
       flex:1; background:rgba(0,0,0,0.2); border-radius:10px; padding:10px;
       overflow-y:auto; max-height:220px; display:flex; flex-direction:column; gap:4px;
     }
@@ -322,28 +375,88 @@ const TURN_SECONDS = 60;
     .btn-end-turn { padding:14px; width:100%; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; border:none; border-radius:10px; font-weight:800; font-size:0.9rem; cursor:pointer; transition:opacity .2s; margin-top:auto; }
     .btn-end-turn:disabled { opacity:.35; cursor:not-allowed; }
 
+    /* ── Modal overlay (shared) ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+      display: flex; align-items: center; justify-content: center; z-index: 200;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── Item modal ── */
+    .item-modal {
+      padding: 36px 32px; max-width: 640px; width: 95%;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+    .item-modal-header { text-align: center; }
+    .item-modal-title  { font-size: 1.4rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 6px; }
+    .item-modal-sub    { color: var(--text-muted); font-size: 0.88rem; }
+
+    .item-cards-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    .item-card {
+      width: 170px; padding: 20px 14px; display: flex; flex-direction: column;
+      align-items: center; gap: 10px; cursor: pointer; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s, border-color 0.18s;
+      text-align: center;
+    }
+    .item-card:hover {
+      transform: scale(1.08) translateY(-4px);
+      border-color: var(--accent-gold);
+      box-shadow: 0 10px 32px rgba(200,155,60,0.25);
+    }
+    .item-icon {
+      width: 64px; height: 64px; border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.12);
+      object-fit: contain; background: rgba(0,0,0,0.5);
+    }
+    .item-name   { font-size: 0.8rem; font-weight: 800; color: white; line-height: 1.3; }
+    .item-effect { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+    .effect-lives    { color: #10b981; background: rgba(16,185,129,0.12); }
+    .effect-coins    { color: var(--accent-gold); background: rgba(200,155,60,0.12); }
+    .effect-income   { color: #60a5fa; background: rgba(96,165,250,0.12); }
+    .effect-reinforce { color: #a78bfa; background: rgba(167,139,250,0.12); }
+    .effect-reset    { color: #f472b6; background: rgba(244,114,182,0.12); }
+
+    /* ── Surrender confirm modal ── */
+    .confirm-modal {
+      padding: 40px 36px; max-width: 380px; width: 90%;
+      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .confirm-icon { font-size: 3rem; }
+    .confirm-modal h3 { font-size: 1.2rem; margin: 0; }
+    .confirm-modal p  { color: var(--text-muted); font-size: 0.88rem; margin: 0; }
+    .confirm-buttons  { display: flex; gap: 12px; margin-top: 8px; }
+    .btn-surrender-confirm { padding: 10px 22px; background: #dc2626; color:#fff; border:none; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.9rem; transition:opacity .2s; }
+    .btn-surrender-confirm:hover { opacity: 0.85; }
+
     /* ── Game over ── */
     .game-over-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:200; }
-    .game-over-panel { text-align:center; padding:48px 40px; max-width:420px; width:90%; display:flex; flex-direction:column; align-items:center; gap:20px; }
-    .result-icon { font-size:4.5rem; }
+    .game-over-panel   { text-align:center; padding:48px 40px; max-width:420px; width:90%; display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .result-icon       { font-size:4.5rem; }
     .game-over-panel h2 { font-size:2.2rem; margin:0; }
     .game-over-panel h2.victory { color:#f59e0b; }
     .game-over-panel h2.defeat  { color:#ef4444; }
-    .result-msg { color:var(--text-muted); font-size:0.95rem; }
+    .result-msg        { color:var(--text-muted); font-size:0.95rem; }
 
     @media (max-width: 1100px) {
       .strategy-layout { grid-template-columns: 1fr; }
       .map-canvas { min-height: 480px; }
       .hide-sm { display: none; }
+      .item-cards-row { gap: 10px; }
+      .item-card { width: 145px; }
     }
   `]
 })
 export class Battle implements OnInit, OnDestroy {
-  private route     = inject(ActivatedRoute);
-  private router    = inject(Router);
-  private auth      = inject(AuthService);
+  private route        = inject(ActivatedRoute);
+  private router       = inject(Router);
+  private auth         = inject(AuthService);
   private lobbyService = inject(LobbyService);
-  private ws        = inject(WebSocketService);
+  private ws           = inject(WebSocketService);
+
+  readonly ITEM_CDN     = ITEM_CDN;
+  readonly ITEM_FALLBACK = ITEM_FALLBACK;
 
   myName            = signal('');
   coins             = signal(0);
@@ -355,16 +468,21 @@ export class Battle implements OnInit, OnDestroy {
   gameOver          = signal(false);
   isWinner          = signal(false);
   gameOverMessage   = signal('');
+  showSurrenderModal = signal(false);
+  pendingItems      = signal<ItemCard[] | null>(null);
+
+  reinforceCountRaw = signal(0);
+  reinforcePct      = computed(() => Math.min(80, this.reinforceCountRaw() * 20));
 
   regions    = signal<RegionNode[]>([]);
   selectedId = signal<string | null>(null);
   selectedNode = computed(() => this.regions().find(r => r.id === this.selectedId()) ?? null);
   logs       = signal<LogEntry[]>([]);
 
-  private salaId        = '';
-  private nodePositions = new Map<string, {x: number, y: number}>();
+  private salaId         = '';
+  private nodePositions  = new Map<string, {x: number, y: number}>();
   private gameSub: StompSubscription | null = null;
-  private lastLogCount  = 0;
+  private lastLogCount   = 0;
   private prevTurnPlayer = '';
   private timerInterval: any = null;
 
@@ -400,15 +518,26 @@ export class Battle implements OnInit, OnDestroy {
     this.coins.set(state.coins?.[this.myName()] ?? 0);
     this.roundNumber.set(state.roundNumber ?? 1);
 
+    // Reinforce failure probability
+    const myCount = state.reinforceCount?.[this.myName()] ?? 0;
+    this.reinforceCountRaw.set(myCount);
+
     if (turnChanged) {
       this.prevTurnPlayer = newTurnPlayer;
       this.hasActed.set(false);
       this.startTimer(state.turnStartTime ?? Date.now());
     }
 
-    // Sync server-side hasActed flag
     if (state.hasActedThisTurn && newTurnPlayer === this.myName()) {
       this.hasActed.set(true);
+    }
+
+    // Pending item choices
+    const pending = state.pendingItemChoices?.[this.myName()];
+    if (pending && pending.length > 0) {
+      this.pendingItems.set(pending as ItemCard[]);
+    } else {
+      this.pendingItems.set(null);
     }
 
     // Rebuild regions
@@ -479,33 +608,36 @@ export class Battle implements OnInit, OnDestroy {
     this.ws.sendEndTurn(this.salaId, this.myName());
   }
 
-  surrender() { this.router.navigate(['/']); }
+  selectItem(item: ItemCard) {
+    this.ws.sendSelectItem(this.salaId, this.myName(), item.id);
+    this.pendingItems.set(null); // optimistic close
+  }
+
+  confirmSurrender() {
+    this.showSurrenderModal.set(false);
+    this.ws.sendSurrender(this.salaId, this.myName());
+    this.router.navigate(['/']);
+  }
 
   // ── Turn timer ────────────────────────────────────────────────────────────
 
   private startTimer(startTimeMs: number) {
     this.clearTimer();
-    this.timerInterval = setInterval(() => {
+    const update = () => {
       const elapsed = Math.floor((Date.now() - startTimeMs) / 1000);
       const left    = Math.max(0, TURN_SECONDS - elapsed);
       this.turnSecondsLeft.set(left);
       if (left === 0) {
         this.clearTimer();
-        if (this.isMyTurn() && !this.gameOver()) {
-          this.endTurn();
-        }
+        if (this.isMyTurn() && !this.gameOver()) this.endTurn();
       }
-    }, 500);
-    // Set immediately so there's no flicker
-    const elapsed = Math.floor((Date.now() - startTimeMs) / 1000);
-    this.turnSecondsLeft.set(Math.max(0, TURN_SECONDS - elapsed));
+    };
+    update();
+    this.timerInterval = setInterval(update, 500);
   }
 
   private clearTimer() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

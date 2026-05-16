@@ -88,6 +88,22 @@ export class WebSocketService {
     });
   }
 
+  sendSelectItem(salaId: string, player: string, itemId: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/selectItem`,
+      body: JSON.stringify({ type: 'SELECT_ITEM', player, target: itemId })
+    });
+  }
+
+  sendSurrender(salaId: string, player: string): void {
+    if (!this.client.connected) return;
+    this.client.publish({
+      destination: `/app/partida/${salaId}/surrender`,
+      body: JSON.stringify({ type: 'SURRENDER', player })
+    });
+  }
+
   disconnect(): void {
     if (this.client.active) {
       this.client.deactivate();

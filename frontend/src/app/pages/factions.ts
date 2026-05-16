@@ -285,6 +285,86 @@ const FACTIONS: FactionInfo[] = [
           </div>
         }
       </div>
+
+      <!-- ── TIERRAS PERDIDAS — Mysterious full-width card ── -->
+      <div class="mystery-card glass-panel">
+        <div class="mystery-fog"></div>
+        <div class="mystery-content">
+          <div class="mystery-left">
+            <div class="mystery-icon-wrap">
+              <div class="mystery-icon-glow"></div>
+              <span class="mystery-icon">❓</span>
+            </div>
+            <div class="mystery-title-group">
+              <h2 class="mystery-name">TIERRAS PERDIDAS</h2>
+              <span class="mystery-badge">??? · Origen Desconocido</span>
+            </div>
+          </div>
+
+          <p class="mystery-lore">
+            En los confines más remotos de Runeterra existen lugares que ningún cartógrafo ha logrado registrar.
+            Las Tierras Perdidas son un territorio del que los exploradores nunca regresan y las leyendas guardan
+            silencio. Sus habitantes, si es que los hay, permanecen ajenos al mundo conocido — o quizás observan
+            desde las sombras, esperando el momento para revelarse. Solo se sabe una cosa: <em>algo</em> poderoso
+            aguarda allí, más allá del horizonte del mapa.
+          </p>
+
+          <div class="mystery-stats">
+            <div class="mystery-stat">
+              <span class="mystery-stat-label">🛡️ Vidas</span>
+              <div class="mystery-bar-wrap">
+                <div class="mystery-bar mystery-bar-anim"></div>
+              </div>
+              <span class="mystery-val">???</span>
+            </div>
+            <div class="mystery-stat">
+              <span class="mystery-stat-label">💰 Inicio</span>
+              <div class="mystery-bar-wrap">
+                <div class="mystery-bar mystery-bar-anim" style="animation-delay:.2s"></div>
+              </div>
+              <span class="mystery-val">???</span>
+            </div>
+            <div class="mystery-stat">
+              <span class="mystery-stat-label">📈 Ingreso</span>
+              <div class="mystery-bar-wrap">
+                <div class="mystery-bar mystery-bar-anim" style="animation-delay:.4s"></div>
+              </div>
+              <span class="mystery-val">???</span>
+            </div>
+            <div class="mystery-stat">
+              <span class="mystery-stat-label">⚔️ Ataque</span>
+              <div class="mystery-bar-wrap">
+                <div class="mystery-bar mystery-bar-anim" style="animation-delay:.6s"></div>
+              </div>
+              <span class="mystery-val">???</span>
+            </div>
+            <div class="mystery-stat">
+              <span class="mystery-stat-label">🔧 Refuerzo</span>
+              <div class="mystery-bar-wrap">
+                <div class="mystery-bar mystery-bar-anim" style="animation-delay:.8s"></div>
+              </div>
+              <span class="mystery-val">???</span>
+            </div>
+          </div>
+
+          <div class="mystery-pros-cons">
+            <div class="mystery-pro">
+              <span class="mystery-pros-title">✅ Ventajas</span>
+              <span class="mystery-qmark">???</span>
+            </div>
+            <div class="mystery-con">
+              <span class="mystery-cons-title">❌ Desventajas</span>
+              <span class="mystery-qmark">???</span>
+            </div>
+          </div>
+
+          <div class="mystery-hint">
+            <span class="mystery-hint-icon">🔮</span>
+            <span>Sus secretos solo se revelan en el campo de batalla...</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -362,6 +442,141 @@ const FACTIONS: FactionInfo[] = [
     .pro-item::before { content: '• '; color: #10b981; }
     .con-item::before { content: '• '; color: #ef4444; }
 
+    /* ── Tierras Perdidas mysterious card ── */
+    .mystery-card {
+      position: relative; overflow: hidden;
+      border: 1px solid rgba(100,30,180,0.35);
+      background: linear-gradient(135deg, rgba(30,5,60,0.92) 0%, rgba(15,0,30,0.96) 100%);
+      box-shadow: 0 0 40px rgba(100,30,180,0.18), inset 0 0 60px rgba(60,15,120,0.1);
+      padding: 0;
+    }
+    .mystery-card:hover {
+      box-shadow: 0 0 60px rgba(120,40,220,0.28), inset 0 0 60px rgba(60,15,120,0.15);
+      border-color: rgba(140,60,220,0.5);
+    }
+
+    /* floating fog particles */
+    .mystery-fog {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 40% at 20% 50%, rgba(80,20,160,0.12) 0%, transparent 70%),
+                  radial-gradient(ellipse 40% 60% at 80% 30%, rgba(60,10,120,0.10) 0%, transparent 70%),
+                  radial-gradient(ellipse 30% 50% at 60% 80%, rgba(100,30,180,0.08) 0%, transparent 70%);
+      animation: fogDrift 8s ease-in-out infinite alternate;
+    }
+    @keyframes fogDrift {
+      0%   { opacity: 0.6; transform: scale(1) translateX(0); }
+      100% { opacity: 1;   transform: scale(1.04) translateX(8px); }
+    }
+
+    .mystery-content {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-rows: auto auto auto;
+      gap: 20px 32px;
+      padding: 32px 36px;
+      align-items: start;
+    }
+
+    .mystery-left {
+      grid-column: 1; grid-row: 1;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .mystery-lore {
+      grid-column: 2; grid-row: 1;
+      font-size: 0.9rem; color: rgba(200,180,240,0.7); line-height: 1.7;
+      font-style: italic; align-self: center;
+    }
+    .mystery-lore em { color: rgba(220,200,255,0.9); font-style: normal; font-weight: 700; }
+
+    .mystery-stats {
+      grid-column: 3; grid-row: 1;
+      display: flex; flex-direction: column; gap: 10px; min-width: 200px;
+    }
+    .mystery-pros-cons {
+      grid-column: 1 / 4; grid-row: 2;
+      display: flex; gap: 24px;
+      border-top: 1px solid rgba(100,30,180,0.2);
+      padding-top: 16px;
+    }
+    .mystery-hint {
+      grid-column: 1 / 4; grid-row: 3;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.8rem; color: rgba(160,100,255,0.6);
+      font-style: italic; border-top: 1px solid rgba(100,30,180,0.15);
+      padding-top: 12px;
+    }
+    .mystery-hint-icon { font-size: 1rem; opacity: 0.7; }
+
+    .mystery-icon-wrap {
+      position: relative; width: 72px; height: 72px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mystery-icon-glow {
+      position: absolute; inset: -6px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(120,40,220,0.35) 0%, transparent 70%);
+      animation: iconPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+      0%,100% { opacity: 0.5; transform: scale(0.9); }
+      50%      { opacity: 1;   transform: scale(1.1); }
+    }
+    .mystery-icon {
+      font-size: 3.2rem; position: relative; z-index: 1;
+      filter: drop-shadow(0 0 12px rgba(160,80,255,0.6));
+    }
+
+    .mystery-title-group { display: flex; flex-direction: column; gap: 8px; }
+    .mystery-name {
+      font-size: 1.6rem; margin: 0; letter-spacing: 0.06em;
+      background: linear-gradient(90deg, #c084fc, #e879f9, #a855f7);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .mystery-badge {
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 2px 12px; border-radius: 20px;
+      background: rgba(100,30,180,0.2); border: 1px solid rgba(140,60,220,0.35);
+      color: rgba(180,120,255,0.9); width: fit-content;
+    }
+
+    .mystery-stat { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 8px; }
+    .mystery-stat-label { font-size: 0.73rem; color: rgba(180,140,240,0.6); font-weight: 600; }
+    .mystery-bar-wrap { height: 6px; background: rgba(100,30,180,0.15); border-radius: 3px; overflow: hidden; }
+    .mystery-bar {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, rgba(120,40,220,0.5), rgba(180,80,255,0.4));
+      animation: barPulse 2s ease-in-out infinite;
+    }
+    @keyframes barPulse {
+      0%,100% { width: 45%; opacity: 0.5; }
+      50%      { width: 55%; opacity: 0.9; }
+    }
+    .mystery-val { font-size: 0.78rem; font-weight: 800; color: rgba(180,120,255,0.8); text-align: right; letter-spacing: 0.05em; }
+
+    .mystery-pro, .mystery-con { display: flex; align-items: center; gap: 12px; }
+    .mystery-pros-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: rgba(100,220,150,0.5); white-space: nowrap; }
+    .mystery-cons-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: rgba(240,100,100,0.5); white-space: nowrap; }
+    .mystery-qmark {
+      font-size: 0.82rem; font-weight: 800; letter-spacing: 0.1em;
+      color: rgba(160,100,255,0.5); font-style: italic;
+      animation: qmarkFlicker 3s ease-in-out infinite;
+    }
+    @keyframes qmarkFlicker {
+      0%,100% { opacity: 0.5; } 50% { opacity: 0.9; }
+    }
+
+    @media (max-width: 900px) {
+      .mystery-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .mystery-left { grid-column: 1; grid-row: 1; }
+      .mystery-lore { grid-column: 1; grid-row: 2; }
+      .mystery-stats { grid-column: 1; grid-row: 3; min-width: unset; }
+      .mystery-pros-cons { grid-column: 1; grid-row: 4; }
+      .mystery-hint { grid-column: 1; grid-row: 5; }
+    }
+
     @media (max-width: 768px) {
       .factions-grid { grid-template-columns: 1fr; }
       .page-header { flex-direction: column; align-items: flex-start; }
@@ -373,7 +588,6 @@ export class Factions {
   readonly factions = FACTIONS;
 
   getAtkBarWidth(bonus: number): number {
-    // Map -15..+35 to 10..100
     return Math.max(10, Math.min(100, ((bonus + 15) / 50) * 100));
   }
 }

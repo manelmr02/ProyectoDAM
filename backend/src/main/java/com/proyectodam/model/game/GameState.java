@@ -18,6 +18,12 @@ public class GameState {
     private boolean hasActedThisTurn = false;
     private Long turnStartTime;
 
+    // Item system
+    private Map<String, Integer> reinforceCount  = new HashMap<>();
+    private Map<String, Integer> incomeBonus     = new HashMap<>();
+    private Map<String, List<ItemCard>> pendingItemChoices = new LinkedHashMap<>();
+    private Map<String, List<String>> playerItems = new HashMap<>();
+
     @Data
     public static class RegionNodeState {
         private String owner;
@@ -28,5 +34,15 @@ public class GameState {
         private String icon;
         private String color;
         private int reinforceCost;
+    }
+
+    @Data
+    public static class ItemCard {
+        private String id;
+        private String name;
+        private String effect;
+        private int iconId;
+        private String type;   // lives | coins | income | reinforce | resetReinforce
+        private int value;
     }
 }

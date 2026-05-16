@@ -21,6 +21,9 @@ public class GameService {
     private static final int    LOSE_REWARD       = 50;
     private static final int    WIN_DAMAGE        = 2;
     private static final int    LOSE_DAMAGE       = 1;
+    private static final double REINFORCE_FAIL_STEP = 0.20; // +20% per attempt
+    private static final double REINFORCE_FAIL_CAP  = 0.80;
+
     @AllArgsConstructor @Getter
     private static class FactionStats {
         int    maxLives;
@@ -30,36 +33,84 @@ public class GameService {
         int    reinforceCost;
     }
 
-    private static final Map<String, String[]> FACTION_VISUAL = new LinkedHashMap<>();
-    private static final Map<String, FactionStats> FACTION_STATS = new LinkedHashMap<>();
+    @AllArgsConstructor @Getter
+    private static class ItemTemplate {
+        String id, name, effect, type;
+        int    iconId, value;
+
+        GameState.ItemCard toCard() {
+            GameState.ItemCard c = new GameState.ItemCard();
+            c.setId(id); c.setName(name); c.setEffect(effect);
+            c.setIconId(iconId); c.setType(type); c.setValue(value);
+            return c;
+        }
+    }
+
+    private static final List<ItemTemplate> ITEM_CATALOG = List.of(
+        new ItemTemplate("Eclipse",          "Eclipse",               "+8 vida",                  "lives",         6692,  8),
+        new ItemTemplate("FiloInfinito",     "Filo Infinito",          "+1500 oro",                "coins",         3031,  1500),
+        new ItemTemplate("SedDeSangre",      "Sed de Sangre",          "+150 ingreso/turno",       "income",        3072,  150),
+        new ItemTemplate("EgidaLegion",      "Égida de la Legión",     "+7 vida",                  "lives",         3105,  7),
+        new ItemTemplate("CorazonHielo",     "Corazón de Hielo",       "-75 oro al reforzar",      "reinforce",     3110, -75),
+        new ItemTemplate("VeloBanshee",      "Velo de la Banshee",     "Resetea fallo de refuerzo","resetReinforce",3102,  0),
+        new ItemTemplate("DanzarinMuerte",   "Danzarín de la Muerte",  "+100 ingreso/turno",       "income",        6333,  100),
+        new ItemTemplate("TridentePosei",    "Tridente de Poseidón",   "+1000 oro",                "coins",         3078,  1000),
+        new ItemTemplate("MareaNoche",       "Marea de la Noche",      "+6 vida",                  "lives",         6630,  6),
+        new ItemTemplate("GarraDragon",      "Garra del Dragón",       "+9 vida",                  "lives",         3065,  9),
+        new ItemTemplate("LichBane",         "Lich Bane",              "+200 ingreso/turno",       "income",        3100,  200),
+        new ItemTemplate("HarvesterSorrow",  "Harvester of Sorrow",    "+500 oro",                 "coins",         4628,  500),
+        new ItemTemplate("TempestadVolteo",  "Tempestad de Volteo",    "+1200 oro",                "coins",         6696,  1200),
+        new ItemTemplate("Incendio",         "Incendio",               "-100 oro al reforzar",     "reinforce",     3165, -100),
+        new ItemTemplate("JoyaGuardian",     "Joya del Guardián",      "+5 vida",                  "lives",         3026,  5),
+        new ItemTemplate("EspirituBosque",   "Espíritu del Bosque",    "+8 vida",                  "lives",         3085,  8),
+        new ItemTemplate("KrakenAsesino",    "Kraken Asesino",         "+1500 oro",                "coins",         6672,  1500),
+        new ItemTemplate("EspadaSombria",    "Espada Sombría",         "-50 oro al reforzar",      "reinforce",     4636, -50),
+        new ItemTemplate("MortalReminder",   "Mortal Reminder",        "+100 ingreso/turno",       "income",        3033,  100),
+        new ItemTemplate("FuerzaNatura",     "Fuerza de la Naturaleza","Resetea fallo de refuerzo","resetReinforce",4401,  0),
+        new ItemTemplate("SunfireAegis",     "Sunfire Aegis",          "+10 vida",                 "lives",         3068,  10),
+        new ItemTemplate("GuanteleteGlac",   "Guantelete Glacial",     "-75 oro al reforzar",      "reinforce",     6662, -75),
+        new ItemTemplate("SombreroRabadon",  "Sombrero de Rabadon",    "+1000 oro",                "coins",         3089,  1000),
+        new ItemTemplate("VarillaVoid",      "Varilla de Void",        "+150 ingreso/turno",       "income",        3135,  150),
+        new ItemTemplate("LudensTempest",    "Luden's Tempest",         "+1500 oro",                "coins",         6655,  1500),
+        new ItemTemplate("ZhonyasHourglass", "Zhonya's Hourglass",     "Resetea fallo de refuerzo","resetReinforce",3157,  0),
+        new ItemTemplate("Thornmail",        "Thornmail",              "+7 vida",                  "lives",         3076,  7),
+        new ItemTemplate("WitsEnd",          "Wit's End",               "+100 ingreso/turno",       "income",        3091,  100),
+        new ItemTemplate("SteraksGage",      "Sterak's Gage",           "+9 vida",                  "lives",         3053,  9),
+        new ItemTemplate("ImmortalShield",   "Immortal Shieldbow",     "Resetea fallo de refuerzo","resetReinforce",6673,  0)
+    );
+
+    private static final Map<String, String[]>      FACTION_VISUAL = new LinkedHashMap<>();
+    private static final Map<String, FactionStats>  FACTION_STATS  = new LinkedHashMap<>();
     private static final FactionStats DEFAULT_STATS = new FactionStats(10, 1000, 100, 0.0, 280);
 
     static {
-        FACTION_VISUAL.put("Demacia",      new String[]{"🛡️", "#c89b3c"});
-        FACTION_VISUAL.put("Noxus",        new String[]{"🪓", "#c0392b"});
-        FACTION_VISUAL.put("Freljord",     new String[]{"❄️", "#5dade2"});
-        FACTION_VISUAL.put("Ionia",        new String[]{"🌸", "#e91e8c"});
-        FACTION_VISUAL.put("Piltover",     new String[]{"⚙️", "#f39c12"});
-        FACTION_VISUAL.put("Zaun",         new String[]{"🧪", "#27ae60"});
-        FACTION_VISUAL.put("Shurima",      new String[]{"⏳", "#f1c40f"});
-        FACTION_VISUAL.put("Shadow Isles", new String[]{"👻", "#8e44ad"});
-        FACTION_VISUAL.put("Targon",       new String[]{"☀️", "#e8d5a3"});
-        FACTION_VISUAL.put("Bilgewater",   new String[]{"⚓", "#2980b9"});
-        FACTION_VISUAL.put("Ixtal",        new String[]{"🌿", "#1abc9c"});
-        FACTION_VISUAL.put("Void",         new String[]{"👾", "#9b59b6"});
+        FACTION_VISUAL.put("Demacia",          new String[]{"🛡️", "#c89b3c"});
+        FACTION_VISUAL.put("Noxus",            new String[]{"🪓", "#c0392b"});
+        FACTION_VISUAL.put("Freljord",         new String[]{"❄️", "#5dade2"});
+        FACTION_VISUAL.put("Ionia",            new String[]{"🌸", "#e91e8c"});
+        FACTION_VISUAL.put("Piltover",         new String[]{"⚙️", "#f39c12"});
+        FACTION_VISUAL.put("Zaun",             new String[]{"🧪", "#27ae60"});
+        FACTION_VISUAL.put("Shurima",          new String[]{"⏳", "#f1c40f"});
+        FACTION_VISUAL.put("Shadow Isles",     new String[]{"👻", "#8e44ad"});
+        FACTION_VISUAL.put("Targon",           new String[]{"☀️", "#e8d5a3"});
+        FACTION_VISUAL.put("Bilgewater",       new String[]{"⚓", "#2980b9"});
+        FACTION_VISUAL.put("Ixtal",            new String[]{"🌿", "#1abc9c"});
+        FACTION_VISUAL.put("Void",             new String[]{"👾", "#9b59b6"});
+        FACTION_VISUAL.put("Tierras Perdidas", new String[]{"❓", "#3d0f5e"});
 
-        FACTION_STATS.put("Demacia",      new FactionStats(12, 1000, 100,  0.00, 200));
-        FACTION_STATS.put("Noxus",        new FactionStats( 8,  800, 100,  0.25, 300));
-        FACTION_STATS.put("Freljord",     new FactionStats(15,  700,  80, -0.10, 180));
-        FACTION_STATS.put("Ionia",        new FactionStats(10, 1000, 160,  0.00, 280));
-        FACTION_STATS.put("Piltover",     new FactionStats( 9, 1500, 160, -0.15, 350));
-        FACTION_STATS.put("Zaun",         new FactionStats(10,  900, 130,  0.10, 240));
-        FACTION_STATS.put("Shurima",      new FactionStats(10, 1000, 100,  0.15, 280));
-        FACTION_STATS.put("Shadow Isles", new FactionStats( 8,  700,  80,  0.30, 400));
-        FACTION_STATS.put("Targon",       new FactionStats(13,  800,  90,  0.00, 280));
-        FACTION_STATS.put("Bilgewater",   new FactionStats(10, 1200, 140,  0.10, 250));
-        FACTION_STATS.put("Ixtal",        new FactionStats(10, 1000, 150,  0.05, 240));
-        FACTION_STATS.put("Void",         new FactionStats( 6, 1500, 170,  0.35, 500));
+        FACTION_STATS.put("Demacia",          new FactionStats(12, 1000, 100,  0.00, 200));
+        FACTION_STATS.put("Noxus",            new FactionStats( 8,  800, 100,  0.25, 300));
+        FACTION_STATS.put("Freljord",         new FactionStats(15,  700,  80, -0.10, 180));
+        FACTION_STATS.put("Ionia",            new FactionStats(10, 1000, 160,  0.00, 280));
+        FACTION_STATS.put("Piltover",         new FactionStats( 9, 1500, 160, -0.15, 350));
+        FACTION_STATS.put("Zaun",             new FactionStats(10,  900, 130,  0.10, 240));
+        FACTION_STATS.put("Shurima",          new FactionStats(10, 1000, 100,  0.15, 280));
+        FACTION_STATS.put("Shadow Isles",     new FactionStats( 8,  700,  80,  0.30, 400));
+        FACTION_STATS.put("Targon",           new FactionStats(13,  800,  90,  0.00, 280));
+        FACTION_STATS.put("Bilgewater",       new FactionStats(10, 1200, 140,  0.10, 250));
+        FACTION_STATS.put("Ixtal",            new FactionStats(10, 1000, 150,  0.05, 240));
+        FACTION_STATS.put("Void",             new FactionStats( 6, 1500, 170,  0.35, 500));
+        FACTION_STATS.put("Tierras Perdidas", new FactionStats(10, 1000, 100,  0.00, 280));
     }
 
     // ── Public API ───────────────────────────────────────────────────────────────
@@ -118,6 +169,13 @@ public class GameService {
             state.getRegions().put(name, region);
         }
 
+        // Give first player of Tierras Perdidas their first item choices
+        String first = order.get(0);
+        GameState.RegionNodeState firstRegion = state.getRegions().get(first);
+        if (firstRegion != null && "Tierras Perdidas".equals(firstRegion.getFaction())) {
+            giveItemsToPlayer(state, first);
+        }
+
         state.getLog().add("¡La batalla de Runaterra ha comenzado! Turno de " + order.get(0) + ".");
         return state;
     }
@@ -128,7 +186,7 @@ public class GameService {
         GameState state = activeGames.get(salaId);
         if (state == null || !"PLAYING".equals(state.getStatus())) return null;
         if (!state.getCurrentTurnPlayer().equals(attackerName)) return null;
-        if (state.isHasActedThisTurn()) return null; // one action per turn
+        if (state.isHasActedThisTurn()) return null;
 
         if (state.getCoins().getOrDefault(attackerName, 0) < ATTACK_COST) return null;
 
@@ -176,7 +234,7 @@ public class GameService {
         GameState state = activeGames.get(salaId);
         if (state == null || !"PLAYING".equals(state.getStatus())) return null;
         if (!state.getCurrentTurnPlayer().equals(playerName)) return null;
-        if (state.isHasActedThisTurn()) return null; // one action per turn
+        if (state.isHasActedThisTurn()) return null;
 
         GameState.RegionNodeState region = state.getRegions().get(targetKey);
         if (region == null || !region.getOwner().equals(playerName)) return null;
@@ -186,11 +244,21 @@ public class GameService {
         int cost = region.getReinforceCost();
         if (state.getCoins().getOrDefault(playerName, 0) < cost) return null;
 
+        int attempts    = state.getReinforceCount().getOrDefault(playerName, 0);
+        double failPct  = Math.min(REINFORCE_FAIL_CAP, attempts * REINFORCE_FAIL_STEP);
+
         state.getCoins().merge(playerName, -cost, Integer::sum);
         state.setHasActedThisTurn(true);
-        region.setLives(region.getMaxLives());
-        state.getLog().add("🔧 " + playerName + " reforzó su región al máximo ("
-                + region.getMaxLives() + " vidas). -" + cost + "💰");
+        state.getReinforceCount().merge(playerName, 1, Integer::sum);
+
+        if (Math.random() < failPct) {
+            state.getLog().add("💥 " + playerName + " intentó reforzar pero ¡FALLÓ! ("
+                    + (int)(failPct * 100) + "% prob. fallo). -" + cost + "💰");
+        } else {
+            region.setLives(region.getMaxLives());
+            state.getLog().add("🔧 " + playerName + " reforzó su región al máximo ("
+                    + region.getMaxLives() + " vidas). -" + cost + "💰");
+        }
 
         return state;
     }
@@ -203,7 +271,6 @@ public class GameService {
         List<String> order = state.getTurnOrder();
         int currentIdx = order.indexOf(playerName);
 
-        // Find next alive player, skipping dead ones
         int nextIdx = (currentIdx + 1) % order.size();
         for (int tries = 0; tries < order.size(); tries++) {
             String candidate = order.get(nextIdx);
@@ -214,27 +281,113 @@ public class GameService {
 
         String nextPlayer = order.get(nextIdx);
 
-        // Detect full round completion (wrapped around)
         if (nextIdx <= currentIdx) {
             int completedRound = state.getRoundNumber();
             state.setRoundNumber(completedRound + 1);
             addRoundSummary(state, completedRound);
+
+            // Every 2 rounds, distribute items to all alive players
+            if (state.getRoundNumber() % 2 == 0) {
+                distributeItemsToAll(state);
+            }
         }
 
         state.setCurrentTurnPlayer(nextPlayer);
         state.setHasActedThisTurn(false);
         state.setTurnStartTime(System.currentTimeMillis());
 
-        // Income for the next player
         GameState.RegionNodeState nextRegion = state.getRegions().get(nextPlayer);
         String nextFaction = nextRegion != null ? nextRegion.getFaction() : "Demacia";
         FactionStats nextStats = FACTION_STATS.getOrDefault(nextFaction, DEFAULT_STATS);
-        int income = nextStats.getIncomePerTurn();
+        int income = nextStats.getIncomePerTurn() + state.getIncomeBonus().getOrDefault(nextPlayer, 0);
         state.getCoins().merge(nextPlayer, income, Integer::sum);
 
         state.getLog().add("🔄 Turno de " + nextPlayer + ". +" + income + "💰");
 
+        // Tierras Perdidas always gets item choices at start of their turn
+        if ("Tierras Perdidas".equals(nextFaction)) {
+            giveItemsToPlayer(state, nextPlayer);
+            state.getLog().add("✨ Las Tierras Perdidas invocan objetos místicos para " + nextPlayer + "...");
+        }
+
         return state;
+    }
+
+    public GameState selectItem(String salaId, String playerName, String itemId) {
+        GameState state = activeGames.get(salaId);
+        if (state == null || !"PLAYING".equals(state.getStatus())) return null;
+
+        List<GameState.ItemCard> pending = state.getPendingItemChoices().get(playerName);
+        if (pending == null || pending.isEmpty()) return null;
+
+        GameState.ItemCard chosen = pending.stream()
+                .filter(c -> c.getId().equals(itemId))
+                .findFirst().orElse(null);
+        if (chosen == null) return null;
+
+        applyItemEffect(state, playerName, chosen);
+        state.getPendingItemChoices().remove(playerName);
+        state.getPlayerItems().computeIfAbsent(playerName, k -> new ArrayList<>()).add(chosen.getName());
+
+        state.getLog().add("🎁 " + playerName + " adquirió " + chosen.getName() + " · " + chosen.getEffect());
+        return state;
+    }
+
+    public GameState surrender(String salaId, String playerName) {
+        GameState state = activeGames.get(salaId);
+        if (state == null || !"PLAYING".equals(state.getStatus())) return null;
+
+        GameState.RegionNodeState region = state.getRegions().get(playerName);
+        if (region != null) region.setLives(0);
+
+        state.getLog().add("🏳️ " + playerName + " ha abandonado la partida. Su región fue eliminada.");
+        checkWinCondition(state);
+
+        if (!"FINISHED".equals(state.getStatus()) && playerName.equals(state.getCurrentTurnPlayer())) {
+            return endTurn(salaId, playerName);
+        }
+        return state;
+    }
+
+    // ── Item helpers ─────────────────────────────────────────────────────────────
+
+    private void giveItemsToPlayer(GameState state, String playerName) {
+        List<ItemTemplate> shuffled = new ArrayList<>(ITEM_CATALOG);
+        Collections.shuffle(shuffled);
+        List<GameState.ItemCard> offered = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            offered.add(shuffled.get(i).toCard());
+        }
+        state.getPendingItemChoices().put(playerName, offered);
+    }
+
+    private void distributeItemsToAll(GameState state) {
+        state.getRegions().forEach((playerName, region) -> {
+            if (region.getLives() > 0) {
+                giveItemsToPlayer(state, playerName);
+            }
+        });
+        state.getLog().add("🎴 ¡Han aparecido nuevos objetos! Cada jugador debe elegir uno.");
+    }
+
+    private void applyItemEffect(GameState state, String playerName, GameState.ItemCard item) {
+        GameState.RegionNodeState region = state.getRegions().get(playerName);
+        switch (item.getType()) {
+            case "lives" -> {
+                if (region != null) {
+                    region.setMaxLives(region.getMaxLives() + item.getValue());
+                    region.setLives(Math.min(region.getLives() + item.getValue(), region.getMaxLives()));
+                }
+            }
+            case "coins"         -> state.getCoins().merge(playerName, item.getValue(), Integer::sum);
+            case "income"        -> state.getIncomeBonus().merge(playerName, item.getValue(), Integer::sum);
+            case "reinforce"     -> {
+                if (region != null) {
+                    region.setReinforceCost(Math.max(50, region.getReinforceCost() + item.getValue()));
+                }
+            }
+            case "resetReinforce" -> state.getReinforceCount().remove(playerName);
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
