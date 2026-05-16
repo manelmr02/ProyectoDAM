@@ -4,6 +4,8 @@ import com.proyectodam.model.game.GameState;
 import com.proyectodam.model.mysql.Sala;
 import com.proyectodam.repository.mysql.SalaRepository;
 import com.proyectodam.service.GameService;
+import com.proyectodam.service.PlayerStatsService;
+import com.proyectodam.service.SalaService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -11,6 +13,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Controller
@@ -20,18 +23,37 @@ public class GameWebSocketController {
     private final GameService gameService;
     private final SimpMessagingTemplate messaging;
     private final SalaRepository salaRepository;
+    private final SalaService salaService;
+    private final PlayerStatsService playerStatsService;
 
     @Data
     public static class GameAction {
         private String type;   // JOIN, ATTACK, REINFORCE, END_TURN
         private String player; // acting player's name
-        private String target; // target region key (player name) for ATTACK / REINFORCE
+        private String target; // target region key for ATTACK / REINFORCE
     }
 
     private void broadcast(String salaId, GameState state) {
         try {
             messaging.convertAndSend("/topic/partida/" + salaId, state);
         } catch (Exception ignored) {}
+
+        if ("FINISHED".equals(state.getStatus())) {
+            handleGameEnd(salaId, state);
+        }
+    }
+
+    private void handleGameEnd(String salaId, GameState state) {
+        try {
+            playerStatsService.recordGameResult(state);
+        } catch (Exception ignored) {}
+
+        try {
+            salaService.eliminarSala(Long.parseLong(salaId));
+            messaging.convertAndSend("/topic/sala/" + salaId, Map.of("deleted", true));
+        } catch (Exception ignored) {}
+
+        gameService.removeGame(salaId);
     }
 
     @MessageMapping("/partida/{id}/join")
