@@ -1,217 +1,331 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LobbyService } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
+
+interface RegionNode {
+  id: string;
+  name: string;
+  type: string;
+  owner: string;
+  lives: number;
+  victorias: number;
+  cost: number;
+  icon: string;
+  x: number; // percentage
+  y: number; // percentage
+  color: string;
+}
 
 @Component({
   selector: 'app-battle',
   imports: [CommonModule, RouterLink],
   template: `
     <div class="battle-container animate-fade-in">
+      <div class="tech-grid"></div>
+
+      <!-- Header Strategy Bar -->
       <div class="battle-header glass-panel">
-        <h1>⚔️ CONQUISTA DE RUNATERRA ⚔️</h1>
-        <p class="subtitle">Turno de: <span class="current-player">{{ currentPlayer() }}</span></p>
+        <div class="header-left">
+          <div class="turn-indicator" [class.my-turn]="isMyTurn()">
+            <span class="pulse-dot"></span>
+            {{ isMyTurn() ? 'TU TURNO' : 'TURNO ENEMIGO' }}
+          </div>
+          <h1>ESTRATEGIA DE RUNATERRA</h1>
+        </div>
+        <div class="header-right">
+          <div class="user-coins">
+            <span class="coin-icon">💰</span> {{ coins() }} Monedas
+          </div>
+          <button class="btn btn-secondary btn-ff" routerLink="/">SURRENDER</button>
+        </div>
       </div>
 
-      <div class="risk-layout">
-        <!-- Mapa de Regiones (Risk Style) -->
-        <div class="risk-map glass-panel">
-          <div class="regions-grid">
+      <div class="strategy-layout">
+        <!-- THE STRATEGIC MAP -->
+        <div class="map-viewport glass-panel">
+          <div class="map-canvas">
+            <!-- Connection Lines (SVG) could be added here -->
+            
             <div 
-              *ngFor="let reg of regions()" 
-              class="region-card" 
-              [class.selected]="selectedRegion() === reg"
-              [class.enemy]="reg.owner !== myName()"
-              [class.ally]="reg.owner === myName()"
-              (click)="selectRegion(reg)">
-              <div class="region-bg" [style.background-image]="'url(' + reg.img + ')'"></div>
-              <div class="region-overlay">
-                <span class="region-name">{{ reg.name }}</span>
-                <div class="region-stats">
-                  <span class="owner">{{ reg.owner }}</span>
-                  <span class="troops">🛡️ {{ reg.troops }}</span>
+              *ngFor="let node of regions()" 
+              class="map-node-wrapper"
+              [style.left.%]="node.x"
+              [style.top.%]="node.y">
+              
+              <div class="player-label">{{ node.name }}</div>
+
+              <div 
+                class="map-node"
+                [class.selected]="selectedId() === node.id"
+                [style.border-color]="node.color"
+                (click)="selectNode(node)">
+                
+                <span class="map-node-icon">{{ node.icon }}</span>
+                <span class="map-node-name">{{ node.type }}</span>
+                
+                <div class="map-node-stats">
+                  <span class="node-lives">🛡️ {{ node.lives }}</span>
+                  <span class="node-wins">🏆 {{ node.victorias }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Panel de Control -->
-        <div class="control-panel glass-panel">
-          <div class="panel-header">
-            <h3>Centro de Mando</h3>
-          </div>
-          
-          <div class="selected-info" *ngIf="selectedRegion()">
-            <p>Región seleccionada: <strong>{{ selectedRegion()!.name }}</strong></p>
-            <p>Propietario: {{ selectedRegion()!.owner }}</p>
-            <p>Estado: {{ selectedRegion()!.owner === myName() ? 'Aliada' : 'Enemiga' }}</p>
-            
-            <div class="actions" *ngIf="isMyTurn()">
+        <!-- COMMAND CENTER (Panel derecho) -->
+        <div class="command-center glass-panel">
+          <div class="panel-section" *ngIf="selectedNode() as node">
+            <h2 [style.color]="node.color">{{ node.name }}</h2>
+            <p class="node-type">{{ node.type }} | Coste: {{ node.cost }} 💰</p>
+            <div class="node-description">
+              Controlada por <strong>{{ node.owner }}</strong>. 
+              {{ node.owner === myName() ? 'Esta región es parte de tu territorio.' : 'Territorio hostil. Preparado para la invasión.' }}
+            </div>
+
+            <div class="action-grid" *ngIf="isMyTurn()">
               <button 
-                class="btn btn-primary" 
-                *ngIf="selectedRegion()!.owner !== myName()" 
-                (click)="attackRegion()">
-                Lanzar Ataque
+                class="btn btn-primary action-btn attack" 
+                *ngIf="node.owner !== myName()" 
+                [disabled]="coins() < 100"
+                (click)="attack(node)">
+                ⚔️ LANZAR ATAQUE
               </button>
               <button 
-                class="btn btn-secondary" 
-                *ngIf="selectedRegion()!.owner === myName()" 
-                (click)="fortifyRegion()">
-                Reforzar
+                class="btn btn-secondary action-btn reinforce" 
+                *ngIf="node.owner === myName()" 
+                [disabled]="coins() < node.cost"
+                (click)="reinforce(node)">
+                🛡️ REFORZAR ({{ node.cost }})
               </button>
             </div>
           </div>
 
-          <div class="battle-log">
-            <div class="log-entry" *ngFor="let log of logs()">{{ log }}</div>
+          <div class="panel-section empty-selection" *ngIf="!selectedNode()">
+            <span class="hint-icon">🛰️</span>
+            <p>Selecciona una región en el mapa para emitir comandos de combate.</p>
           </div>
 
-          <div class="turn-actions">
-            <button class="btn btn-danger-outline" (click)="endTurn()" [disabled]="!isMyTurn()">Finalizar Turno</button>
-            <button class="btn btn-danger-outline" routerLink="/">SURRENDER (FF)</button>
+          <div class="battle-log">
+            <h3>LOG DE COMBATE</h3>
+            <div class="log-entries">
+              <div class="log-item" *ngFor="let log of logs()">
+                <span class="log-time">{{ log.time }}</span>
+                <span class="log-text">{{ log.text }}</span>
+              </div>
+            </div>
           </div>
+
+          <button class="btn btn-primary end-turn-btn" (click)="endTurn()" [disabled]="!isMyTurn()">
+            FINALIZAR TURNO
+          </button>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .battle-container { display: flex; flex-direction: column; gap: 24px; padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .battle-header { text-align: center; padding: 20px; }
-    .battle-header h1 { color: var(--accent-gold); font-size: 2rem; letter-spacing: 0.1em; }
-    .current-player { color: var(--accent-secondary); font-weight: 800; }
-
-    .risk-layout { display: grid; grid-template-columns: 1fr 350px; gap: 24px; }
-
-    /* Map Styles */
-    .risk-map { padding: 20px; min-height: 600px; }
-    .regions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .battle-container { position: relative; min-height: calc(100vh - 120px); display: flex; flex-direction: column; gap: 20px; padding: 20px 0; }
     
-    .region-card { 
-      position: relative; height: 120px; border-radius: 12px; overflow: hidden; 
-      border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.3s;
+    .battle-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; }
+    .header-left { display: flex; align-items: center; gap: 24px; }
+    .turn-indicator { 
+      padding: 6px 16px; border-radius: 20px; background: rgba(0,0,0,0.4); 
+      border: 1px solid var(--accent-danger); color: var(--accent-danger);
+      font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 8px;
     }
-    .region-card:hover { transform: scale(1.05); border-color: var(--accent-gold); }
-    .region-card.selected { border-color: var(--accent-secondary); box-shadow: 0 0 15px var(--accent-secondary); }
-    .region-card.enemy { border-left: 6px solid var(--accent-danger); }
-    .region-card.ally { border-left: 6px solid var(--accent-success); }
+    .turn-indicator.my-turn { border-color: var(--accent-success); color: var(--accent-success); }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
+    
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .user-coins { font-weight: 700; color: var(--accent-gold); font-size: 1.1rem; }
+    .btn-ff { font-size: 0.75rem; padding: 6px 12px; border-color: rgba(239,68,68,0.4); color: #ef4444; }
 
-    .region-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.6); }
-    .region-overlay { position: absolute; inset: 0; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; z-index: 1; }
-    .region-name { font-family: var(--font-heading); font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-    .region-stats { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
-    .owner { color: var(--text-muted); }
-    .troops { background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; color: var(--accent-gold); font-weight: 700; }
-
-    /* Control Panel */
-    .control-panel { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-    .battle-log { 
-      flex: 1; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; 
-      font-family: monospace; font-size: 0.8rem; overflow-y: auto; height: 200px;
-      border: 1px solid var(--border-light);
+    .strategy-layout { display: grid; grid-template-columns: 1fr 380px; gap: 24px; flex: 1; }
+    
+    .map-viewport { position: relative; background: rgba(0,0,0,0.4); overflow: hidden; border: 1px solid var(--border-light); }
+    .map-canvas { position: relative; width: 100%; height: 100%; min-height: 650px; }
+    
+    .map-node-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -50%); }
+    .player-label { 
+      background: rgba(0,0,0,0.8); color: var(--accent-gold); padding: 2px 12px; border-radius: 4px;
+      font-size: 0.75rem; font-weight: 800; border: 1px solid var(--border-light);
+      text-transform: uppercase; white-space: nowrap;
     }
-    .log-entry { margin-bottom: 4px; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
 
-    .selected-info { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border: 1px solid var(--border-light); }
-    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-    .turn-actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+    .command-center { display: flex; flex-direction: column; gap: 24px; }
+    .node-type { color: var(--accent-secondary); font-size: 0.85rem; font-weight: 700; margin-top: -12px; }
+    .node-description { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+    
+    .action-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .action-btn { width: 100%; padding: 14px; font-size: 0.9rem; }
+    .action-btn.attack { background: linear-gradient(135deg, #ef4444, #991b1b); }
+    
+    .empty-selection { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--text-muted); }
+    .hint-icon { font-size: 3rem; opacity: 0.2; margin-bottom: 12px; }
 
-    @media (max-width: 1000px) {
-      .risk-layout { grid-template-columns: 1fr; }
+    .battle-log { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .battle-log h3 { font-size: 0.8rem; color: var(--accent-gold); opacity: 0.8; }
+    .log-entries { 
+      flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px;
+      overflow-y: auto; max-height: 250px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .log-item { font-family: monospace; font-size: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px; }
+    .log-time { color: var(--text-muted); margin-right: 8px; }
+
+    .end-turn-btn { margin-top: auto; padding: 16px; width: 100%; }
+
+    @media (max-width: 1100px) {
+      .strategy-layout { grid-template-columns: 1fr; }
+      .map-viewport { min-height: 500px; }
     }
   `]
 })
 export class Battle implements OnInit {
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
+  private lobbyService = inject(LobbyService);
 
-  lobbyId = signal(0);
   myName = signal('');
-  currentPlayer = signal('');
+  coins = signal(1000);
   isMyTurn = signal(true);
   
-  regions = signal<any[]>([]);
-  selectedRegion = signal<any | null>(null);
-  logs = signal<string[]>([]);
+  regions = signal<RegionNode[]>([]);
+  selectedId = signal<string | null>(null);
+  selectedNode = computed(() => this.regions().find(r => r.id === this.selectedId()) ?? null);
+  
+  logs = signal<{time: string, text: string}[]>([]);
 
   ngOnInit() {
-    this.lobbyId.set(Number(this.route.snapshot.paramMap.get('id')));
     this.myName.set(this.auth.currentUser()?.username ?? 'Invocador');
-    this.currentPlayer.set(this.myName());
-    
     this.initMap();
-    this.logs.set(['¡Bienvenidos a la Conquista de Runaterra!', 'Es tu turno. Selecciona una región enemiga para atacar o una aliada para reforzar.']);
+    this.addLog('Sistemas Hextech en línea. Iniciando despliegue de Runaterra.');
   }
 
   initMap() {
-    const list = [
-      { name: 'Demacia', owner: 'Garen', troops: 5, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/demacia_creature_01.jpg' },
-      { name: 'Noxus', owner: 'Darius', troops: 8, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/noxus_mountains.jpg' },
-      { name: 'Ionia', owner: 'Irelia', troops: 4, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/ionia_beauty_01.jpg' },
-      { name: 'Freljord', owner: 'Ashe', troops: 6, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/freljord_mountains.jpg' },
-      { name: 'Shurima', owner: 'Azir', troops: 7, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/shurima_temple_01.jpg' },
-      { name: 'Aguas Estancadas', owner: 'Miss Fortune', troops: 3, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/bilgewater_bay.jpg' },
-      { name: 'Islas de la Sombra', owner: 'Thresh', troops: 9, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/shadow_isles_mist.jpg' },
-      { name: 'Targon', owner: 'Leona', troops: 4, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/targon_mountain.jpg' },
-      { name: 'Piltover', owner: 'Vi', troops: 5, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/piltover_city.jpg' },
-      { name: 'Zaun', owner: 'Jinx', troops: 5, img: 'https://universe-meeps.leagueoflegends.com/v1/assets/images/zaun_undercity.jpg' },
-    ];
+    const lobbyId = Number(this.route.snapshot.paramMap.get('id'));
+    const lobby = this.lobbyService.getLobbyById(lobbyId);
     
-    // Assign at least one region to player for simulation
-    list[0].owner = this.myName();
-    list[0].troops = 10;
+    if (!lobby) {
+      this.addLog('Error: No se pudo cargar la información de la sala.');
+      return;
+    }
+
+    // Logical positions for up to 8 players to avoid overlaps
+    const positions = [
+      { x: 15, y: 25 }, { x: 75, y: 25 }, // Top Left, Top Right
+      { x: 15, y: 65 }, { x: 75, y: 65 }, // Bottom Left, Bottom Right
+      { x: 45, y: 15 }, { x: 45, y: 75 }, // Top Center, Bottom Center
+      { x: 45, y: 45 }, { x: 75, y: 45 }  // Center, Mid Right
+    ];
+
+    const factionData: any = {
+      'Demacia': { icon: '🛡️', color: 'var(--faction-demacia)' },
+      'Noxus': { icon: '🪓', color: 'var(--faction-noxus)' },
+      'Freljord': { icon: '❄️', color: 'var(--faction-freljord)' },
+      'Ionia': { icon: '🌸', color: 'var(--faction-ionia)' },
+      'Piltover': { icon: '⚙️', color: 'var(--faction-piltover)' },
+      'Zaun': { icon: '🧪', color: 'var(--faction-zaun)' },
+      'Shurima': { icon: '⏳', color: 'var(--faction-shurima)' },
+      'Shadow Isles': { icon: '👻', color: 'var(--faction-shadow)' },
+      'Targon': { icon: '☀️', color: 'var(--faction-targon)' },
+      'Bilgewater': { icon: '⚓', color: 'var(--faction-bilgewater)' },
+      'Ixtal': { icon: '🌿', color: 'var(--faction-ixtal)' },
+      'Void': { icon: '👾', color: 'var(--faction-void)' }
+    };
+
+    const list: RegionNode[] = lobby.playerList.map((player, index) => {
+      const faction = player.faction || 'Demacia';
+      const data = factionData[faction] || factionData['Demacia'];
+      const pos = positions[index % positions.length];
+      
+      return {
+        id: player.name,
+        name: player.name,
+        type: faction,
+        owner: player.name,
+        lives: 5,
+        victorias: 0,
+        cost: 250, // Base cost
+        icon: data.icon,
+        x: pos.x,
+        y: pos.y,
+        color: data.color
+      };
+    });
     
     this.regions.set(list);
   }
 
-  selectRegion(reg: any) {
-    this.selectedRegion.set(reg);
+  selectNode(node: RegionNode) {
+    this.selectedId.set(node.id);
   }
 
-  attackRegion() {
+  attack(node: RegionNode) {
     if (!this.isMyTurn()) return;
-    const reg = this.selectedRegion();
-    if (!reg) return;
-
-    this.addLog(`Atacando ${reg.name}...`);
+    const ATTACK_COST = 150;
     
-    // Random outcome simulation
-    const success = Math.random() > 0.5;
-    if (success) {
-      this.addLog(`¡Victoria! Has conquistado ${reg.name}.`);
-      reg.owner = this.myName();
-      reg.troops = 2;
-    } else {
-      this.addLog(`Derrota. El enemigo ha repelido el ataque en ${reg.name}.`);
-      reg.troops = Math.max(1, reg.troops - 1);
+    if (this.coins() < ATTACK_COST) {
+      this.addLog('Monedas insuficientes para lanzar el ataque.');
+      return;
     }
+
+    this.coins.update(c => c - ATTACK_COST);
+    this.addLog(`Iniciando asalto a ${node.name} (-${ATTACK_COST} 💰)...`);
+    console.log(`Gasto Ataque: ${ATTACK_COST}. Monedas restantes: ${this.coins()}`);
+    
+    // Success simulation
+    const win = Math.random() > 0.4;
+    if (win) {
+      const reward = 200; // RN-16.2: Ganador recibe 200
+      this.coins.update(c => c + reward);
+      this.addLog(`¡VICTORIA! ${node.name} conquistada. Recompensa: +${reward} 💰`);
+      node.owner = this.myName();
+      node.victorias++;
+    } else {
+      const reward = 50; // RN-16.3: Perdedor recibe 50
+      this.coins.update(c => c + reward);
+      this.addLog(`DERROTA en ${node.name}. Recompensa de consolación: +${reward} 💰`);
+      node.lives = Math.max(0, node.lives - 1);
+    }
+    this.updateRegions();
   }
 
-  fortifyRegion() {
-    const reg = this.selectedRegion();
-    if (reg) {
-      reg.troops += 2;
-      this.addLog(`Has reforzado ${reg.name} con 2 tropas adicionales.`);
+  reinforce(node: RegionNode) {
+    if (this.coins() < node.cost) {
+      this.addLog('No tienes suficientes monedas.');
+      return;
     }
+    
+    const cost = node.cost;
+    this.coins.update(c => c - cost);
+    console.log(`Gasto Refuerzo: ${cost}. Monedas restantes: ${this.coins()}`);
+    
+    node.lives = 5; // Reset lives to max
+    this.addLog(`Has reforzado ${node.name} por ${cost} monedas.`);
+    this.updateRegions();
   }
 
   endTurn() {
     this.isMyTurn.set(false);
-    this.currentPlayer.set('Enemigo AI');
-    this.addLog('Fin del turno. La IA está moviendo sus piezas...');
+    this.addLog('Turno finalizado. Procesando movimientos enemigos...');
     
     setTimeout(() => {
       this.isMyTurn.set(true);
-      this.currentPlayer.set(this.myName());
-      this.addLog('Es tu turno de nuevo.');
-    }, 2000);
+      const income = 100; // Ingreso base por ronda
+      this.coins.update(c => c + income);
+      this.addLog(`Es tu turno. Ingresos de ronda: +${income} 💰`);
+    }, 2500);
   }
 
-  private addLog(msg: string) {
+  private updateRegions() {
+    this.regions.set([...this.regions()]);
+  }
+
+  private addLog(text: string) {
     const d = new Date();
-    const time = `[${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}]`;
-    this.logs.update(l => [`${time} ${msg}`, ...l]);
+    const time = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    this.logs.update(l => [{time, text}, ...l]);
   }
 }
-

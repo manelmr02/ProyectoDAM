@@ -24,18 +24,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(authService.login(req.getNickname(), req.getPassword()));
+    public ResponseEntity<?> login(@Valid @RequestBody AuthDtos.LoginRequest req) {
+        return ResponseEntity.ok(authService.login(req.getUsernameOrEmail(), req.getPassword()));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("message", "Sesión cerrada correctamente."));
-    }
-
-    @Data
-    public static class LoginRequest {
-        @NotBlank private String nickname;
-        @NotBlank private String password;
     }
 }

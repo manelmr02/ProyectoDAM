@@ -54,6 +54,12 @@ export class App {
   });
 
   confirmLogout() {
+    // Delete lobbies if owner logs out
+    const user = this.auth.currentUser();
+    if (user) {
+      this.lobbyService.clearUserLobbies(user.username);
+    }
+
     this.auth.logout();
     this.showLogoutModal.set(false);
     this.isMobileMenuOpen.set(false);

@@ -91,7 +91,7 @@ export class LobbyService {
   private auth = inject(AuthService);
   private profanity = inject(ProfanityService);
   private readonly onStorageChange = (event: StorageEvent) => {
-    if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
+    if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER && event.key !== (STORAGE_KEY + '_updated')) return;
     this.syncFromStorage();
   };
   private readonly onWindowFocus = () => this.syncFromStorage();
@@ -107,6 +107,9 @@ export class LobbyService {
     window.addEventListener('storage', this.onStorageChange);
     window.addEventListener('focus', this.onWindowFocus);
     document.addEventListener('visibilitychange', this.onWindowFocus);
+
+    // Polling fallback (cada 3s) para asegurar sincronización entre pestañas
+    setInterval(() => this.syncFromStorage(), 3000);
   }
 
   // ── Persistence ─────────────────────────────────────────────────────────────
@@ -119,35 +122,42 @@ export class LobbyService {
 
       // Migration/Reset if version changed
       if (ver < CURRENT_VER) {
-        const userLobbies = saved.filter(l => l.isOwn);
-        const seeds = this.seedLobbies();
-        // Merge user lobbies with new seeds
+        // Keep non-seed lobbies (seeds have IDs 4029, 4030)
+        const userLobbies = saved.filter(l => l.id !== 4029 && l.id !== 4030);
+        const seeds = this.seedLobbies(false); // Don't save seeds yet
         return [...userLobbies, ...seeds];
       }
 
-      if (saved.length === 0) return this.seedLobbies();
+      if (saved.length === 0) return this.seedLobbies(true);
       return saved;
     } catch {
-      return this.seedLobbies();
+      return this.seedLobbies(true);
     }
   }
 
   private save(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.lobbies()));
+    const data = JSON.stringify(this.lobbies());
+    localStorage.setItem(STORAGE_KEY, data);
     localStorage.setItem(STORAGE_VER, CURRENT_VER.toString());
+    // Forzamos actualización en otras pestañas con un timestamp
+    localStorage.setItem(STORAGE_KEY + '_updated', Date.now().toString());
   }
 
   private syncFromStorage(): void {
     const latest = this.load();
     const current = this.lobbies();
-    if (JSON.stringify(latest) !== JSON.stringify(current)) {
+    
+    const latestIds = latest.map(l => l.id).join(',');
+    const currentIds = current.map(l => l.id).join(',');
+    
+    if (latestIds !== currentIds || JSON.stringify(latest) !== JSON.stringify(current)) {
       this.lobbies.set(latest);
     }
   }
 
   // ── Seed (initial demo data) ─────────────────────────────────────────────────
 
-  private seedLobbies(): LobbyEntry[] {
+  private seedLobbies(doSave: boolean = true): LobbyEntry[] {
     const seed: LobbyEntry[] = [
       {
         id: 4029,
@@ -180,7 +190,10 @@ export class LobbyService {
         ),
       },
     ];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    if (doSave) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+      localStorage.setItem(STORAGE_VER, CURRENT_VER.toString());
+    }
     return seed;
   }
 
@@ -212,6 +225,17 @@ export class LobbyService {
   deleteLobby(id: number): void {
     this.lobbies.update(list => list.filter(l => l.id !== id));
     this.save();
+    // Force sync for current tab
+    this.syncFromStorage();
+  }
+
+  /** Forcefully remove all lobbies created by a user */
+  clearUserLobbies(username: string): void {
+    const filtered = this.lobbies().filter(l => l.host !== username);
+    this.lobbies.set(filtered);
+    this.save();
+    // Force immediate sync for storage events
+    localStorage.setItem(STORAGE_KEY + '_updated', Date.now().toString());
   }
 
   createLobby(dto: CreateLobbyDto): LobbyEntry {
@@ -222,7 +246,7 @@ export class LobbyService {
     const host = user.username;
 
     // Prevent creating multiple rooms: remove all previous owned rooms
-    this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
+    this.lobbies.update(list => list.filter(l => l.host !== host));
 
     if (this.profanity.hasProfanity(dto.name) || this.profanity.hasProfanity(dto.description)) {
       throw new Error('El nombre o descripción de la sala contiene palabras no permitidas.');

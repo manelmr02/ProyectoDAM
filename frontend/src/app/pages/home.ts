@@ -60,7 +60,12 @@ import { AuthService } from '../services/auth.service';
         </div>
         <div class="lobbies-controls">
           <label class="search-label" for="search-sala">🔍 Buscar sala</label>
-          <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+          <div class="search-row">
+            <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+            <button class="btn btn-secondary btn-code" (click)="openJoinCodeModal()">
+              INTRODUCIR CÓDIGO
+            </button>
+          </div>
         </div>
       </div>
 
@@ -279,6 +284,33 @@ import { AuthService } from '../services/auth.service';
     </div>
   </div>
 
+  <!-- ═══════════════ MODAL: UNIRSE POR CÓDIGO ═══════════════ -->
+  <div class="modal-overlay" *ngIf="showJoinCodeModal()" (click)="closeOnBackdrop($event, 'code')">
+    <div class="modal-panel glass-panel animate-modal" id="join-code-modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🎫</span>
+          <div>
+            <h2 class="modal-title">Unirse por código</h2>
+            <p class="modal-subtitle">Introduce el ID de la sala</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="showJoinCodeModal.set(false); unlockBody()">✕</button>
+      </div>
+      <div class="modal-form">
+        <div class="mform-group">
+          <label for="join-code">ID de Sala / Código</label>
+          <input id="join-code" type="text" class="mform-control" [(ngModel)]="joinCodeInput" placeholder="Ej: 4030" autocomplete="off">
+        </div>
+        <div class="alert-error-inline" *ngIf="joinCodeError()">{{ joinCodeError() }}</div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="showJoinCodeModal.set(false); unlockBody()">Cancelar</button>
+          <button class="btn btn-primary modal-submit-btn" (click)="confirmJoinByCode()">ENTRAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════ MODAL: CREAR PARTIDA ═══════════════ -->
   <div class="modal-overlay" *ngIf="showModal()" (click)="closeOnBackdrop($event, 'create')">
     <div class="modal-panel glass-panel animate-modal" id="create-lobby-modal">
@@ -350,7 +382,7 @@ import { AuthService } from '../services/auth.service';
           <label for="room-pass">Código de Acceso <span class="req">*</span></label>
           <input id="room-pass" type="text" class="mform-control"
             placeholder="Ej: 1234 (mín. 4 caracteres)" name="roomPassword"
-            [(ngModel)]="draft.password" [required]="draft.hasPassword" minlength="4"
+            [(ngModel)]="draft.password" minlength="4"
             autocomplete="off" style="-webkit-text-security: disc;">
         </div>
 
@@ -374,7 +406,7 @@ import { AuthService } from '../services/auth.service';
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary modal-submit-btn"
-            [disabled]="createForm.invalid || (draft.hasPassword && !draft.password)">
+            [disabled]="!draft.name || draft.name.length < 3 || (draft.hasPassword && (!draft.password || draft.password.length < 4))">
             ⚔ CREAR SALA
           </button>
         </div>
@@ -397,6 +429,8 @@ import { AuthService } from '../services/auth.service';
     .lobbies-controls { display: flex; flex-direction: column; gap: 6px; }
     .search-label { font-family: var(--font-heading); font-size: 0.78rem; color: var(--accent-secondary); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
     .search-input { background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); color: white; padding: 10px 16px; border-radius: 8px; outline: none; font-family: var(--font-body); font-size: 0.9rem; width: 220px; transition: all var(--transition-fast); }
+    .search-row { display: flex; gap: 8px; align-items: center; }
+    .btn-code { padding: 10px 16px; font-size: 0.8rem; white-space: nowrap; height: 40px; }
     .search-input:focus { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(6,182,212,0.2); }
     .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 
@@ -448,7 +482,7 @@ import { AuthService } from '../services/auth.service';
     .minvalid { border-color: var(--accent-danger) !important; }
     .mfield-error { font-size: 0.78rem; color: var(--accent-danger); }
     .mcheckbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; color: var(--text-muted); user-select: none; font-family: var(--font-body); }
-    .mcheckbox-label input[type=checkbox] { display: none; }
+    .mcheckbox-label input[type=checkbox] { position: absolute; opacity: 0; pointer-events: none; }
     .mcheckbox-custom { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; border: 2px solid var(--border-light); background: rgba(0,0,0,0.3); transition: all var(--transition-fast); position:relative; }
     .mcheckbox-label input:checked ~ .mcheckbox-custom { background: var(--accent-primary); border-color: var(--accent-primary); }
     .mcheckbox-label input:checked ~ .mcheckbox-custom::after { content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-size:0.75rem; font-weight:900; }
@@ -493,11 +527,14 @@ export class Home {
   showModal = signal(false);
   showPasswordModal = signal(false);
   showExistingLobbyModal = signal(false);
+  showJoinCodeModal = signal(false);
   showNoSessionAlert = signal(false);
   showCopiedToast = signal(false);
   existingLobby = signal<import('../services/lobby.service').LobbyEntry | null>(null);
   passwordInput = '';
+  joinCodeInput = '';
   passwordError = signal('');
+  joinCodeError = signal('');
   profanityError = signal('');
 
   /** Lobby the user is trying to join (needs password check) */
@@ -579,13 +616,44 @@ export class Home {
     document.body.style.overflow = '';
   }
 
-  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing' | 'login') {
+  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing' | 'login' | 'code') {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) {
       if (which === 'create') this.closeModal();
       else if (which === 'pass') { this.showPasswordModal.set(false); this.unlockBody(); }
+      else if (which === 'existing') { this.showExistingLobbyModal.set(false); this.unlockBody(); }
       else if (which === 'login') { this.showLoginRequired.set(false); this.unlockBody(); }
-      else { this.showExistingLobbyModal.set(false); this.unlockBody(); }
+      else if (which === 'code') { this.showJoinCodeModal.set(false); this.unlockBody(); }
     }
+  }
+
+
+  openJoinCodeModal() {
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+    this.joinCodeInput = '';
+    this.joinCodeError.set('');
+    this.showJoinCodeModal.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  confirmJoinByCode() {
+    const code = Number(this.joinCodeInput.trim());
+    if (isNaN(code)) {
+      this.joinCodeError.set('Introduce un código numérico válido.');
+      return;
+    }
+
+    const lobby = this.lobbyService.getLobbyById(code);
+    if (!lobby) {
+      this.joinCodeError.set('No se ha encontrado ninguna sala con ese código.');
+      return;
+    }
+
+    this.showJoinCodeModal.set(false);
+    this.unlockBody();
+    this.joinLobby(lobby);
   }
 
   confirmCreate() {

@@ -9,7 +9,11 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByNickname(String nickname);
+
+    Optional<Usuario> findByNicknameOrEmail(String nickname, String email);
+
     boolean existsByNickname(String nickname);
+
     boolean existsByEmail(String email);
 
     // RF-22: usuario con más victorias (suma de victorias de sus regiones)
