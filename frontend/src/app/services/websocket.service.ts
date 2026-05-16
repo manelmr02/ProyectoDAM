@@ -1,16 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import type { StompSubscription } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
   private client: Client;
-  private readonly WS_URL = 'http://51.107.3.232/ws';
+  private readonly WS_URL = 'ws://51.107.3.232/ws';
 
   constructor() {
     this.client = new Client({
-      webSocketFactory: () => new SockJS(this.WS_URL) as any,
+      brokerURL: this.WS_URL,
       reconnectDelay: 5000,
     });
   }
