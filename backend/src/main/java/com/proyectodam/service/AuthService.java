@@ -2,20 +2,21 @@ package com.proyectodam.service;
 
 import com.proyectodam.dto.AuthDtos;
 import com.proyectodam.exception.BadRequestException;
-import com.proyectodam.model.mysql.Usuario;
-import com.proyectodam.repository.mysql.UsuarioRepository;
 import com.proyectodam.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.proyectodam.model.mongo.UsuarioMongo;
+import com.proyectodam.repository.mongo.UsuarioMongoRepository;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final JwtService jwtService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioMongoRepository usuarioMongoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.nickname:admin}")
@@ -25,19 +26,17 @@ public class AuthService {
     private String adminPassword;
 
     public AuthDtos.AuthResponse login(String usernameOrEmail, String password) {
-        // 1. Intentar login Admin (Prioritario para que no falles)
+        // 1. Intentar login Admin
         if (adminNickname.equals(usernameOrEmail) && adminPassword.equals(password)) {
             return createAdminResponse();
         }
 
-        // 2. Intentar buscar en DB (Nickname o Email)
-        Usuario usuario = usuarioRepository.findByNicknameOrEmail(usernameOrEmail, usernameOrEmail).orElse(null);
+        // 2. Buscar en MongoDB (Nickname o Email)
+        UsuarioMongo usuario = usuarioMongoRepository.findByNickname(usernameOrEmail)
+                .orElseGet(() -> usuarioMongoRepository.findByNicknameOrEmail("", usernameOrEmail).orElse(null));
 
         if (usuario != null) {
-            // COMPROBACIÓN RELAJADA: Aceptamos texto plano o BCrypt
-            boolean matches = password.equals(usuario.getPassword()) || passwordEncoder.matches(password, usuario.getPassword());
-            
-            if (matches) {
+            if (passwordEncoder.matches(password, usuario.getPassword()) || password.equals(usuario.getPassword())) {
                 return createAuthResponse(usuario);
             }
         }
@@ -45,13 +44,16 @@ public class AuthService {
         throw new BadRequestException("Usuario o contraseña incorrectos.");
     }
 
-    private AuthDtos.AuthResponse createAuthResponse(Usuario usuario) {
+    private AuthDtos.AuthResponse createAuthResponse(UsuarioMongo usuario) {
         String token = jwtService.generateToken(usuario.getNickname());
         AuthDtos.UserDto userDto = new AuthDtos.UserDto();
-        userDto.setId(String.valueOf(usuario.getId()));
+        userDto.setId(usuario.getId());
         userDto.setUsername(usuario.getNickname());
         userDto.setEmail(usuario.getEmail());
         userDto.setClan(usuario.getClan());
+        userDto.setAvatarColor(usuario.getAvatarColor());
+        userDto.setAvatarImage(usuario.getAvatarImage());
+        userDto.setBio(usuario.getBio());
         userDto.setLevel(1);
         
         AuthDtos.UserStatsDto stats = new AuthDtos.UserStatsDto();
@@ -73,14 +75,29 @@ public class AuthService {
     }
 
     public AuthDtos.AuthResponse register(AuthDtos.RegisterRequest req) {
-        Usuario usuario = new Usuario();
+        // Verificar si ya existe el usuario o el email en MongoDB
+        if (usuarioMongoRepository.existsByNickname(req.getUsername())) {
+            throw new BadRequestException("El nombre de usuario '" + req.getUsername() + "' ya está registrado.");
+        }
+        if (usuarioMongoRepository.existsByEmail(req.getEmail())) {
+            throw new BadRequestException("El email '" + req.getEmail() + "' ya está registrado.");
+        }
+
+        UsuarioMongo usuario = new UsuarioMongo();
         usuario.setNombre(req.getUsername());
         usuario.setApellidos("");
         usuario.setNickname(req.getUsername());
         usuario.setEmail(req.getEmail());
-        // Guardamos encriptado por seguridad, pero el login acepta ambos
         usuario.setPassword(passwordEncoder.encode(req.getPassword()));
-        usuario = usuarioRepository.save(usuario);
+        usuario.setMonedas(0);
+        usuario.setClan(req.getClan());
+        
+        // Asignar avatar por defecto
+        usuario.setAvatarImage("");
+        usuario.setAvatarColor("#" + Integer.toHexString(req.getUsername().hashCode()).substring(0, 6));
+
+        usuario = usuarioMongoRepository.save(usuario);
+        
         return createAuthResponse(usuario);
     }
 }

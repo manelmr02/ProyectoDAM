@@ -16,6 +16,7 @@ export interface UserStats {
 }
 
 export interface UserProfile {
+  id: string;
   username: string;
   email: string;
   clan: string;
@@ -153,6 +154,7 @@ export class AuthService {
       const defaults = generateDefaultProfile();
       const profile: UserProfile = {
         ...defaults,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
         clan: response.user.clan || defaults.faction!,
@@ -186,7 +188,8 @@ export class AuthService {
 
       const profile: UserProfile = {
         ...defaults,
-        ...localMatch, 
+        ...localMatch,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
         clan: response.user.clan || localMatch?.clan || defaults.faction!,

@@ -436,68 +436,50 @@ export class Lobby implements OnInit, OnDestroy {
       return;
     }
 
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    const found = this.lobbyService.getLobbyById(id);
+    const id = this.route.snapshot.paramMap.get('id') || '';
 
-    if (!found) {
-      this.lobby.set(null);
-      return;
-    }
+    // Usamos la nueva versión asíncrona para asegurar que encuentra la sala recién creada
+    this.lobbyService.getLobbyById(id).then(found => {
+      if (!found) {
+        this.lobby.set(null);
+        return;
+      }
 
-    // Auto-join if not in list (e.g. on refresh or direct nav)
-    const isMember = found.playerList.some(p => p.name === this.myName());
-    if (!isMember && found.players < found.maxPlayers && found.status === 'Esperando') {
-      const updated = this.lobbyService.joinLobby(found.id);
-      if (updated) {
-        this.lobby.set(updated);
+      // Auto-join if not in list
+      const isMember = found.playerList.some(p => p.name === this.myName());
+      if (!isMember && found.players < found.maxPlayers && found.status === 'LOBBY') {
+        this.lobbyService.joinLobby(found.id).then((updated: any) => {
+          this.lobby.set(updated || found);
+          this.initMessages();
+        });
       } else {
         this.lobby.set(found);
+        this.initMessages();
       }
-    } else {
-      this.lobby.set(found);
-    }
 
-    // Sync isReady state if already in lobby
-    const me = this.lobby()?.playerList.find(p => p.name === this.myName());
-    if (me) {
-      this.isReady.set(me.status === 'Ready');
-    }
+      // Sync isReady state
+      const me = found.playerList.find(p => p.name === this.myName());
+      if (me) {
+        this.isReady.set(me.status === 'Ready');
+      }
+    });
+  }
 
-    const currentLobby = this.lobby()!;
+  private initMessages() {
+    const currentLobby = this.lobby();
+    if (!currentLobby) return;
 
     // Initial system message
     this.addSystem(`Sala "${currentLobby.name}" cargada. ${currentLobby.players}/${currentLobby.maxPlayers} jugadores.`);
 
     // Announce existing players
-    currentLobby.playerList.forEach((p, i) => {
+    currentLobby.playerList.forEach((p: any, i: number) => {
       if (p.name !== this.myName()) {
         const t = setTimeout(() => {
           this.addSystem(`${p.name} está en la sala.`);
         }, (i + 1) * 400);
         this.timers.push(t);
       }
-    });
-
-    // Schedule NPC chat messages
-    const chats = this.lobbyService.getNpcChats().filter(c =>
-      found.playerList.some(p => p.name === c.sender)
-    );
-
-    chats.slice(0, 4).forEach((c, i) => {
-      const delay = 3000 + i * 3500 + Math.random() * 2000;
-      const t = setTimeout(() => {
-        this.addMsg(c.sender, c.text);
-        // Sometimes a player marks as ready after chatting
-        if (Math.random() > 0.6) {
-          const t2 = setTimeout(() => {
-            this.lobbyService.updatePlayerStatus(found.id, c.sender, 'Ready');
-            this.lobby.set(this.lobbyService.getLobbyById(found.id) ?? null);
-            this.addSystem(`${c.sender} está LISTO.`);
-          }, 1500);
-          this.timers.push(t2);
-        }
-      }, delay);
-      this.timers.push(t);
     });
   }
 
@@ -512,32 +494,33 @@ export class Lobby implements OnInit, OnDestroy {
     }
   }
 
-  toggleReady() {
+  async toggleReady() {
     const l = this.lobby();
     if (!l) return;
     this.isReady.update(v => !v);
     const newStatus = this.isReady() ? 'Ready' : 'Waiting';
-    this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
-    this.lobby.set(this.lobbyService.getLobbyById(l.id) ?? null);
+    await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
+    const updated = await this.lobbyService.getLobbyById(l.id);
+    this.lobby.set(updated ?? null);
     this.addSystem(this.isReady()
       ? `${this.myName()} está LISTO.`
       : `${this.myName()} canceló el estado listo.`
     );
   }
 
-  leaveLobby() {
+  async leaveLobby() {
     const l = this.lobby();
     if (l) {
-      this.lobbyService.leaveLobby(l.id);
+      await this.lobbyService.leaveLobby(l.id);
       this.router.navigate(['/']);
     }
   }
 
-  confirmDelete() {
+  async confirmDelete() {
     const l = this.lobby();
     if (!l) return;
 
-    this.lobbyService.deleteLobby(l.id);
+    await this.lobbyService.deleteLobby(l.id);
     this.showDeleteModal.set(false);
     this.router.navigate(['/']);
   }
@@ -625,15 +608,16 @@ export class Lobby implements OnInit, OnDestroy {
     this.countdown.set(5);
   }
 
-  changeFaction(newFaction: string) {
+  async changeFaction(newFaction: string) {
     const l = this.lobby();
     if (!l) return;
     const user = this.auth.currentUser();
     if (!user) return;
-    
+
     const level = user.regionalLevels?.[newFaction] || 1;
     this.lobbyService.changePlayerFaction(l.id, this.myName(), newFaction, level);
-    this.lobby.set(this.lobbyService.getLobbyById(l.id) ?? null);
+    const updated = await this.lobbyService.getLobbyById(l.id);
+    this.lobby.set(updated ?? null);
     this.addSystem(`${this.myName()} ha cambiado su región a ${newFaction}.`);
   }
 }

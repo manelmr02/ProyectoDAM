@@ -29,9 +29,8 @@ public class Region {
     @Column(nullable = false)
     private Integer victorias = 0;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    @Column(name = "usuario_id", nullable = false)
+    private String usuarioId;
 
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();

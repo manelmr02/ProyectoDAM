@@ -86,9 +86,9 @@ import { AuthService } from '../services/auth.service';
               </span>
             </div>
             <span class="lobby-status-badge"
-              [class.status-waiting]="lobby.status === 'Esperando'"
-              [class.status-ingame]="lobby.status === 'En curso'">
-              {{ lobby.status }}
+              [class.status-waiting]="lobby.status === 'LOBBY'"
+              [class.status-ingame]="lobby.status === 'IN_GAME'">
+              {{ lobby.status === 'LOBBY' ? 'ESPERANDO' : 'EN JUEGO' }}
             </span>
           </div>
 
@@ -121,13 +121,13 @@ import { AuthService } from '../services/auth.service';
             <button
               *ngIf="!lobby.isOwn"
               class="btn btn-join"
-              [class.btn-disabled]="lobby.status === 'En curso' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
-              [disabled]="lobby.status === 'En curso' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
+              [class.btn-disabled]="lobby.status === 'IN_GAME' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
+              [disabled]="lobby.status === 'IN_GAME' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
               (click)="isUserMember(lobby) ? enterLobby(lobby.id) : joinLobby(lobby)">
-              <span *ngIf="lobby.status === 'En curso'">EN JUEGO</span>
-              <span *ngIf="lobby.status !== 'En curso' && lobby.players >= lobby.maxPlayers && !isUserMember(lobby)">LLENA</span>
-              <span *ngIf="lobby.status !== 'En curso' && isUserMember(lobby)">ENTRAR</span>
-              <span *ngIf="lobby.status !== 'En curso' && !isUserMember(lobby) && lobby.players < lobby.maxPlayers">UNIRSE</span>
+              <span *ngIf="lobby.status === 'IN_GAME'">EN JUEGO</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && lobby.players >= lobby.maxPlayers && !isUserMember(lobby)">LLENA</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && isUserMember(lobby)">ENTRAR</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && !isUserMember(lobby) && lobby.players < lobby.maxPlayers">UNIRSE</span>
             </button>
           </div>
         </div>
@@ -538,7 +538,7 @@ export class Home {
   profanityError = signal('');
 
   /** Lobby the user is trying to join (needs password check) */
-  private pendingLobbyId: number | null = null;
+  private pendingLobbyId: string | null = null;
 
   draft = this.emptyDraft();
 
@@ -548,11 +548,18 @@ export class Home {
 
   filteredLobbies() {
     const q = this.searchQuery.trim().toLowerCase();
-    const all = this.lobbyService.lobbies();
+    const username = this.auth.currentUser()?.username;
+    const all = this.lobbyService.lobbies().map(l => ({
+      ...l,
+      isOwn: l.host === username
+    }));
+
     if (!q) return all;
-    return all.filter(l =>
-      l.name.toLowerCase().includes(q) || l.host.toLowerCase().includes(q)
-    );
+    return all.filter((l: any) => {
+      const nameMatch = l.name?.toLowerCase().includes(q);
+      const hostMatch = l.host?.toLowerCase().includes(q);
+      return nameMatch || hostMatch;
+    });
   }
 
   // ── Modal: Crear ────────────────────────────────────────────────
@@ -596,10 +603,10 @@ export class Home {
   }
 
   /** Delete the existing lobby then open the create modal */
-  deleteAndCreate() {
+  async deleteAndCreate() {
     const lobby = this.existingLobby();
     if (!lobby) return;
-    this.lobbyService.deleteLobby(lobby.id);
+    await this.lobbyService.deleteLobby(lobby.id);
     this.showExistingLobbyModal.set(false);
     this.existingLobby.set(null);
     this.draft = this.emptyDraft();
@@ -638,14 +645,14 @@ export class Home {
     document.body.style.overflow = 'hidden';
   }
 
-  confirmJoinByCode() {
-    const code = Number(this.joinCodeInput.trim());
-    if (isNaN(code)) {
-      this.joinCodeError.set('Introduce un código numérico válido.');
+  async confirmJoinByCode() {
+    const code = this.joinCodeInput.trim();
+    if (!code) {
+      this.joinCodeError.set('Introduce un código de sala válido.');
       return;
     }
 
-    const lobby = this.lobbyService.getLobbyById(code);
+    const lobby = await this.lobbyService.getLobbyById(code);
     if (!lobby) {
       this.joinCodeError.set('No se ha encontrado ninguna sala con ese código.');
       return;
@@ -656,10 +663,11 @@ export class Home {
     this.joinLobby(lobby);
   }
 
-  confirmCreate() {
+  async confirmCreate() {
     let lobby: import('../services/lobby.service').LobbyEntry;
     try {
-      lobby = this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+      const result = await this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+      lobby = result;
     } catch (err: any) {
       if (err.message.includes('palabras no permitidas')) {
         this.profanityError.set(err.message);
@@ -675,7 +683,7 @@ export class Home {
   }
 
   // ── Join logic ──────────────────────────────────────────────────
-  joinLobby(lobby: { id: number; hasPassword: boolean; password?: string }) {
+  joinLobby(lobby: { id: string; hasPassword: boolean; password?: string }) {
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';
@@ -694,31 +702,30 @@ export class Home {
 
   confirmJoinWithPassword() {
     if (!this.pendingLobbyId) return;
-    const lobby = this.lobbyService.getLobbyById(this.pendingLobbyId);
-    if (lobby?.password !== this.passwordInput) {
-      this.passwordError.set('Código incorrecto. Inténtalo de nuevo.');
-      return;
-    }
     this.showPasswordModal.set(false);
     document.body.style.overflow = '';
-    this.doJoin(this.pendingLobbyId);
+    this.doJoin(this.pendingLobbyId, this.passwordInput);
     this.pendingLobbyId = null;
   }
 
-  private doJoin(id: number) {
-    const joined = this.lobbyService.joinLobby(id);
-    if (!joined) return;
-    this.router.navigate(['/lobby', id]);
+  private async doJoin(id: string | number, password?: string) {
+    const joined = await this.lobbyService.joinLobby(id, password);
+    if (!joined) {
+      // Si falló, probablemente fue la contraseña (si es privada)
+      this.passwordError.set('Código incorrecto o error al unirse.');
+      return;
+    }
+    this.router.navigate(['/lobby', id.toString()]);
   }
 
-  shareLobbyLink(id: number) {
+  shareLobbyLink(id: string | number) {
     const url = `${window.location.origin}/lobby/${id}`;
     navigator.clipboard.writeText(url).catch(() => {
       window.prompt('Copia este enlace:', url);
     });
   }
 
-  enterLobby(id: number) {
+  enterLobby(id: string | number) {
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';

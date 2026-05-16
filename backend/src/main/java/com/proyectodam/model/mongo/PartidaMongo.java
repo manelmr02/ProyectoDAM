@@ -27,7 +27,7 @@ public class PartidaMongo {
     @Data
     @NoArgsConstructor
     public static class ParticipanteMongo {
-        private Long usuarioId;
+        private String usuarioId;
         private String nickname;
         private Long regionId;
         private String nombreRegion;

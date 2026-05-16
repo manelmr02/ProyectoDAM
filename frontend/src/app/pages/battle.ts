@@ -203,9 +203,9 @@ export class Battle implements OnInit {
     this.addLog('Sistemas Hextech en línea. Iniciando despliegue de Runaterra.');
   }
 
-  initMap() {
-    const lobbyId = Number(this.route.snapshot.paramMap.get('id'));
-    const lobby = this.lobbyService.getLobbyById(lobbyId);
+  async initMap() {
+    const idParam = this.route.snapshot.paramMap.get('id') || '';
+    const lobby = await this.lobbyService.getLobbyById(idParam);
     
     if (!lobby) {
       this.addLog('Error: No se pudo cargar la información de la sala.');
