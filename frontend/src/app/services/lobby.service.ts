@@ -50,7 +50,7 @@ export class LobbyService {
   private auth = inject(AuthService);
   private profanity = inject(ProfanityService);
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:8080/api/salas';
+  private readonly API_URL = 'http://51.107.3.232/api/salas';
 
   /** All lobbies — reactive signal */
   readonly lobbies = signal<LobbyEntry[]>([]);

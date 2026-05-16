@@ -87,7 +87,7 @@ export class AuthService {
   private router = inject(Router);
   private profanity = inject(ProfanityService);
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = 'http://51.107.3.232/api/auth';
 
   // ── Reactive state ──────────────────────────────────────────────
   readonly currentUser = signal<UserProfile | null>(this.loadSession());
