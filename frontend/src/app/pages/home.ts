@@ -587,7 +587,8 @@ export class Home {
       return;
     }
 
-    this.draft = this.emptyDraft();
+    const userFaction = user.defaultFaction || user.faction || 'Demacia';
+    this.draft = { ...this.emptyDraft(), faction: userFaction };
     this.profanityError.set('');
     this.showModal.set(true);
     document.body.style.overflow = 'hidden';

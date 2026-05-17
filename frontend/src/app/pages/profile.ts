@@ -97,9 +97,14 @@ const MASTERY_LABELS: Record<number, string> = {
               }
             </div>
             <div class="profile-meta-row">
-              <span class="meta-chip faction-chip">
-                <span class="chip-icon">⚔</span>
-                @if (user()!.clanTag) { <span>[{{ user()!.clanTag }}] </span> }{{ user()!.clan || user()!.faction || 'Sin Región' }}
+              @if (user()!.clan) {
+                <span class="meta-chip faction-chip">
+                  <span class="chip-icon">⚔</span>
+                  @if (user()!.clanTag) { <span>[{{ user()!.clanTag }}] </span> }{{ user()!.clan }}
+                </span>
+              }
+              <span class="meta-chip region-chip">
+                <span class="chip-icon">🗺</span> {{ user()!.defaultFaction || user()!.faction || 'Sin Región' }}
               </span>
               <span class="meta-chip">
                 <span class="chip-icon">📧</span> {{ user()!.email }}
@@ -428,6 +433,7 @@ const MASTERY_LABELS: Record<number, string> = {
     }
     .chip-icon { font-size: 0.9rem; }
     .faction-chip { color: var(--accent-gold); border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.08); }
+    .region-chip  { color: var(--accent-secondary); border-color: rgba(6,182,212,0.2); background: rgba(6,182,212,0.08); }
     .profile-bio { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; max-width: 600px; font-style: italic; }
     .btn-edit { align-self: flex-start; padding: 10px 20px; font-size: 0.88rem; white-space: nowrap; border-radius: 10px; }
 
