@@ -31,7 +31,11 @@ public class Usuario {
 
     private String clan;
     private String avatarColor;
+
+    @Column(columnDefinition = "LONGTEXT")
     private String avatarImage;
+
+    @Column(columnDefinition = "TEXT")
     private String bio;
 
     @Column(nullable = false)

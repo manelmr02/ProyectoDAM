@@ -20,7 +20,8 @@ interface PlayerStatsDto {
   regionMastery: Record<string, { games: number; wins: number; xp: number; level: number }>;
 }
 
-const STATS_API = 'http://51.107.3.232/api/stats';
+const STATS_API  = 'http://51.107.3.232/api/stats';
+const USERS_API  = 'http://51.107.3.232/api/usuarios';
 
 const XP_THRESHOLDS = [0, 10, 25, 45, 70, 100, 135, 175, 220, 270];
 
@@ -705,12 +706,19 @@ export class Profile implements OnInit {
         this.draft.avatarImage = base64;
         if (!this.editing()) {
           this.auth.updateProfile({ avatarImage: base64 });
+          this.syncToBackend({ avatarImage: base64 });
           this.saveMsg.set('Foto de perfil actualizada.');
           setTimeout(() => this.saveMsg.set(''), 2000);
         }
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  private syncToBackend(updates: Record<string, any>) {
+    const userId = this.auth.currentUser()?.id;
+    if (!userId) return;
+    this.http.put(`${USERS_API}/${userId}`, updates).subscribe({ error: () => {} });
   }
 
   leaveClan() {
@@ -757,6 +765,11 @@ export class Profile implements OnInit {
     });
 
     if (result.ok) {
+      this.syncToBackend({
+        avatarImage: this.draft.avatarImage ?? '',
+        avatarColor: this.draft.avatarColor,
+        bio:         this.draft.bio.trim(),
+      });
       this.saveMsg.set('Perfil actualizado correctamente.');
       setTimeout(() => { this.editing.set(false); this.saveMsg.set(''); }, 1500);
     }

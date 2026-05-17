@@ -50,9 +50,12 @@ public class UsuarioService {
     public Usuario actualizarUsuario(String id, Map<String, Object> updates) {
         Usuario u = getUsuario(id);
 
-        if (updates.containsKey("nombre"))    u.setNombre((String) updates.get("nombre"));
-        if (updates.containsKey("apellidos")) u.setApellidos((String) updates.get("apellidos"));
-        if (updates.containsKey("monedas"))   u.setMonedas((Integer) updates.get("monedas"));
+        if (updates.containsKey("nombre"))      u.setNombre((String) updates.get("nombre"));
+        if (updates.containsKey("apellidos"))  u.setApellidos((String) updates.get("apellidos"));
+        if (updates.containsKey("monedas"))    u.setMonedas((Integer) updates.get("monedas"));
+        if (updates.containsKey("avatarImage")) u.setAvatarImage((String) updates.get("avatarImage"));
+        if (updates.containsKey("avatarColor")) u.setAvatarColor((String) updates.get("avatarColor"));
+        if (updates.containsKey("bio"))         u.setBio((String) updates.get("bio"));
 
         if (updates.containsKey("email")) {
             String email = (String) updates.get("email");
