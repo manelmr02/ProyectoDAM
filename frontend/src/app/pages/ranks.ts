@@ -131,7 +131,7 @@ const DIVISIONS = ['IV', 'III', 'II', 'I'];
               <div class="chart-bar-wrap">
                 <div class="chart-bar"
                   [style.height.%]="tier.heightPct"
-                  [style.background]="'linear-gradient(180deg, ' + tier.color + ', ' + tier.color + '55')"
+                  [style.background]="chartBarStyle(tier)"
                   [style.box-shadow]="'0 0 12px ' + tier.glow">
                   <span class="chart-lp">{{ tier.lpMin }}</span>
                 </div>
@@ -315,5 +315,9 @@ export class Ranks {
     if (!tier.lpMax) return 100;
     const total = 3600;
     return Math.min(100, Math.round(((tier.lpMax + 1) / total) * 100));
+  }
+
+  chartBarStyle(tier: any): string {
+    return `linear-gradient(180deg, ${tier.color}, ${tier.color}55)`;
   }
 }
