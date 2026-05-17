@@ -5,6 +5,7 @@ import { Register } from './pages/register';
 import { Lobby } from './pages/lobby';
 import { Ranking } from './pages/ranking';
 import { Profile } from './pages/profile';
+import { PlayerProfile } from './pages/player-profile';
 import { Battle } from './pages/battle';
 import { Terms } from './pages/terms';
 import { Privacy } from './pages/privacy';
@@ -13,18 +14,19 @@ import { Support } from './pages/support';
 import { Factions } from './pages/factions';
 
 export const routes: Routes = [
-  { path: '',              component: Home },
-  { path: 'login',         component: Login },
-  { path: 'register',      component: Register },
-  { path: 'lobby/:id',     component: Lobby },
-  { path: 'lobby',         component: Lobby },
-  { path: 'battle/:id',    component: Battle },
-  { path: 'ranking',       component: Ranking },
-  { path: 'profile',       component: Profile },
-  { path: 'regiones',      component: Factions },
-  { path: 'terms',         component: Terms },
-  { path: 'privacy',       component: Privacy },
-  { path: 'rules',         component: Rules },
-  { path: 'support',       component: Support },
-  { path: '**',            redirectTo: '' }
+  { path: '',                  component: Home },
+  { path: 'login',             component: Login },
+  { path: 'register',          component: Register },
+  { path: 'lobby/:id',         component: Lobby },
+  { path: 'lobby',             component: Lobby },
+  { path: 'battle/:id',        component: Battle },
+  { path: 'ranking',           component: Ranking },
+  { path: 'profile',           component: Profile },
+  { path: 'player/:username',  component: PlayerProfile },
+  { path: 'regiones',          component: Factions },
+  { path: 'terms',             component: Terms },
+  { path: 'privacy',           component: Privacy },
+  { path: 'rules',             component: Rules },
+  { path: 'support',           component: Support },
+  { path: '**',                redirectTo: '' }
 ];

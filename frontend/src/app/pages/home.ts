@@ -15,14 +15,14 @@ import { AuthService } from '../services/auth.service';
     <!-- ═══════════════ HERO ═══════════════ -->
     <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
                         <div class="hero-content">
-        <span class="badge">Fase de Selección y Bloqueos</span>
+        <span class="badge">Batalla legendaria</span>
         <h1>Domina la <span class="highlight-gradient">Grieta</span></h1>
-        <p class="subtitle">Elige a tu campeón, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
+        <p class="subtitle">Elige a tu región, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
 
         <div class="action-panel glass-panel">
           <div class="action-panel-header">
             <h3>¿Listo para la batalla?</h3>
-            <p>Configura tu sala y lidera a tu equipo a la victoria.</p>
+            <p>Configura tu sala y lidera a tu región a la victoria.</p>
           </div>
           <div class="action-buttons">
             <button class="btn btn-primary play-btn" (click)="openModal()">
@@ -41,8 +41,8 @@ import { AuthService } from '../services/auth.service';
         <div class="champion-card glass-panel">
           <div class="card-image-placeholder"></div>
           <div class="card-info">
-            <h3>Fijar o Banear</h3>
-            <span class="rolemage">Anticipa a tus enemigos</span>
+            <h3>Runaterra</h3>
+            <span class="rolemage">Aplasta a tus enemigos</span>
           </div>
         </div>
       </div>
@@ -476,7 +476,7 @@ import { AuthService } from '../services/auth.service';
     .mform-group label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--accent-secondary); letter-spacing: 0.05em; }
     .req { color: var(--accent-danger); }
     .moptional { color: var(--text-muted); font-size: 0.78em; font-weight: 400; }
-    .mform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .mform-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
     .mform-control { background: rgba(0,0,0,0.4); border: 1px solid var(--border-light); padding: 11px 14px; border-radius: 8px; color: white; font-family: var(--font-body); font-size: 0.93rem; outline: none; transition: all var(--transition-fast); width: 100%; }
     .mform-control:focus { border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(139,92,246,0.3); }
     .minvalid { border-color: var(--accent-danger) !important; }
@@ -519,7 +519,7 @@ export class Home {
   readonly auth = inject(AuthService);
   private router = inject(Router);
 
-  regions = ["Demacia", "Noxus", "Ionia", "Freljord", "Piltover", "Zaun", "Shurima", "Shadow Isles", "Targon", "Bilgewater", "Ixtal", "The Void"];
+  regions = ["Demacia", "Noxus", "Ionia", "Freljord", "Piltover", "Zaun", "Shurima", "Shadow Isles", "Targon", "Bilgewater", "Ixtal", "Void", "Tierras Perdidas"];
 
 
   searchQuery = '';
@@ -738,10 +738,27 @@ export class Home {
   shareLobby(lobby: any, event: Event) {
     event.stopPropagation();
     const url = `${window.location.origin}/lobby/${lobby.id}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const show = () => {
       this.showCopiedToast.set(true);
       setTimeout(() => this.showCopiedToast.set(false), 2500);
-    });
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(show).catch(() => this.copyFallback(url, show));
+    } else {
+      this.copyFallback(url, show);
+    }
+  }
+
+  private copyFallback(text: string, onSuccess: () => void) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); onSuccess(); } catch { }
+    document.body.removeChild(ta);
   }
 
   /** Checks if the current user is already in the player list of a lobby */

@@ -621,6 +621,7 @@ export class Battle implements OnInit, OnDestroy {
     if (state.status === 'FINISHED' && !this.gameOver()) {
       this.clearTimer();
       this.gameOver.set(true);
+      this.lobbyService.refreshLobbies();
       if (state.winner === this.myName()) {
         this.isWinner.set(true);
         this.gameOverMessage.set('Has conquistado Runaterra. ¡La gloria es tuya!');

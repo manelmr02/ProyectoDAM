@@ -379,6 +379,8 @@ export class Lobby implements OnInit, OnDestroy {
 
   private timers: ReturnType<typeof setTimeout>[] = [];
   private wsSubscriptions: StompSubscription[] = [];
+  private leaving = false;
+  private gameStarted = false;
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
 
@@ -512,7 +514,8 @@ export class Lobby implements OnInit, OnDestroy {
     this.wsSubscriptions.forEach(s => s.unsubscribe());
     this.stopCountdown();
 
-    if (this.isReady()) {
+    // Only reset ready-status if the user is still in the lobby (not leaving or starting a game)
+    if (!this.leaving && !this.gameStarted && this.isReady()) {
       this.toggleReady();
     }
   }
@@ -532,10 +535,12 @@ export class Lobby implements OnInit, OnDestroy {
 
   async leaveLobby() {
     const l = this.lobby();
-    if (l) {
+    if (!l) return;
+    this.leaving = true;
+    try {
       await this.lobbyService.leaveLobby(l.id);
-      this.router.navigate(['/']);
-    }
+    } catch { /* navigate regardless */ }
+    this.router.navigate(['/']);
   }
 
   async confirmDelete() {
@@ -572,13 +577,27 @@ export class Lobby implements OnInit, OnDestroy {
     const l = this.lobby();
     if (!l) return;
     const url = `${window.location.origin}/lobby/${l.id}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const showToast = () => {
       this.showShareToast.set(true);
       setTimeout(() => this.showShareToast.set(false), 2500);
-    }).catch(() => {
-      // Fallback: prompt
-      window.prompt('Copia este enlace:', url);
-    });
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(showToast).catch(() => this.copyFallback(url, showToast));
+    } else {
+      this.copyFallback(url, showToast);
+    }
+  }
+
+  private copyFallback(text: string, onSuccess: () => void) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(el);
+    if (ok) { onSuccess(); } else { window.prompt('Copia este enlace:', text); }
   }
 
   private addSystem(text: string) {
@@ -620,6 +639,7 @@ export class Lobby implements OnInit, OnDestroy {
 
       if (remaining <= 0) {
         this.stopCountdown();
+        this.gameStarted = true;
         const lobbyId = this.lobby()?.id;
         this.router.navigate(['/battle', lobbyId]);
       }

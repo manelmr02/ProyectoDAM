@@ -151,20 +151,19 @@ export class LobbyService {
     };
 
     const s = await firstValueFrom(this.http.post<any>(this.API_URL, body));
-    
-    // Al crear, el creador debe unirse automáticamente (pasando la pass si es privada)
-    return this.joinLobby(s.id, dto.password) as Promise<LobbyEntry>;
+
+    // Al crear, el creador debe unirse automáticamente (pasando la pass y región si es privada)
+    return this.joinLobby(s.id, dto.password, dto.faction) as Promise<LobbyEntry>;
   }
 
-  async joinLobby(id: string | number, password?: string): Promise<LobbyEntry | null> {
+  async joinLobby(id: string | number, password?: string, faction?: string): Promise<LobbyEntry | null> {
     const user = this.auth.currentUser();
     if (!user) return null;
 
     const participante = {
       nombre: user.username,
-      faction: user.faction || 'Demacia',
+      faction: faction || user.faction || 'Demacia',
       status: 'Waiting',
-      avatarImage: user.avatarImage,
       avatarColor: user.avatarColor || '#8b5cf6'
     };
 

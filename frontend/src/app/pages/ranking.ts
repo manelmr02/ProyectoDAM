@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../services/auth.service';
 import { firstValueFrom } from 'rxjs';
 
 interface RegionMastery { games: number; wins: number; xp: number; level: number; }
@@ -136,7 +138,7 @@ const API = 'http://51.107.3.232/api/stats';
         @if (!hasActiveFilters() && players().length >= 3) {
           <div class="podium-row">
             <!-- 2nd -->
-            <div class="podium-card podium-2 glass-panel">
+            <div class="podium-card podium-2 glass-panel" (click)="goToProfile(players()[1].username)" title="Ver perfil">
               <div class="podium-pos">🥈 #2</div>
               <div class="podium-name">{{ players()[1].username }}</div>
               <div class="podium-rank" [style.color]="getRankColor(players()[1].lp)">
@@ -145,7 +147,7 @@ const API = 'http://51.107.3.232/api/stats';
               <div class="podium-lp">{{ players()[1].lp }} LP</div>
             </div>
             <!-- 1st -->
-            <div class="podium-card podium-1 glass-panel">
+            <div class="podium-card podium-1 glass-panel" (click)="goToProfile(players()[0].username)" title="Ver perfil">
               <div class="podium-crown">👑</div>
               <div class="podium-pos">#1</div>
               <div class="podium-name">{{ players()[0].username }}</div>
@@ -155,7 +157,7 @@ const API = 'http://51.107.3.232/api/stats';
               <div class="podium-lp">{{ players()[0].lp }} LP</div>
             </div>
             <!-- 3rd -->
-            <div class="podium-card podium-3 glass-panel">
+            <div class="podium-card podium-3 glass-panel" (click)="goToProfile(players()[2].username)" title="Ver perfil">
               <div class="podium-pos">🥉 #3</div>
               <div class="podium-name">{{ players()[2].username }}</div>
               <div class="podium-rank" [style.color]="getRankColor(players()[2].lp)">
@@ -184,7 +186,8 @@ const API = 'http://51.107.3.232/api/stats';
             </thead>
             <tbody>
               @for (p of players(); track p.username; let i = $index) {
-                <tr [class.top-1]="i === 0" [class.top-3]="i > 0 && i < 3">
+                <tr [class.top-1]="i === 0" [class.top-3]="i > 0 && i < 3"
+                    class="clickable-row" (click)="goToProfile(p.username)" title="Ver perfil de {{ p.username }}">
                   <td class="rank-num">
                     @if (i === 0) { <span class="medal">👑</span> }
                     @else if (i === 1) { <span class="medal">🥈</span> }
@@ -265,7 +268,9 @@ const API = 'http://51.107.3.232/api/stats';
     .podium-card {
       flex: 1; max-width: 220px; padding: 20px 16px; text-align: center; border-radius: 16px;
       display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; transition: transform 0.2s;
     }
+    .podium-card:hover { transform: translateY(-4px); }
     .podium-1 {
       order: 2; border: 2px solid var(--accent-gold);
       background: linear-gradient(180deg, rgba(200,155,60,0.15) 0%, transparent 100%);
@@ -289,7 +294,9 @@ const API = 'http://51.107.3.232/api/stats';
     }
     .ranking-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
     .ranking-table tbody tr { transition: background 0.15s; }
-    .ranking-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+    .ranking-table tbody tr.clickable-row { cursor: pointer; }
+    .ranking-table tbody tr:hover td { background: rgba(139,92,246,0.07); }
+    .ranking-table tbody tr.clickable-row:hover .player-col strong { color: var(--accent-secondary); text-decoration: underline; }
     .ranking-table tr:last-child td { border-bottom: none; }
 
     .top-1 td { background: rgba(200,155,60,0.06); }
@@ -333,7 +340,9 @@ const API = 'http://51.107.3.232/api/stats';
   `]
 })
 export class Ranking implements OnInit {
-  private http = inject(HttpClient);
+  private http   = inject(HttpClient);
+  private router = inject(Router);
+  private auth   = inject(AuthService);
 
   players = signal<PlayerStats[]>([]);
   loading = signal(true);
@@ -366,6 +375,15 @@ export class Ranking implements OnInit {
     this.filterTier = '';
     this.filterMinWinrate = 0;
     this.loadRanking();
+  }
+
+  goToProfile(username: string) {
+    const me = this.auth.currentUser()?.username;
+    if (me && me === username) {
+      this.router.navigate(['/profile']);
+    } else {
+      this.router.navigate(['/player', username]);
+    }
   }
 
   private async loadRanking() {
