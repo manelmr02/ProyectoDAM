@@ -25,6 +25,7 @@ public class SalaJugador {
 
     private String faction;
     private String status = "Waiting";
+    @Column(columnDefinition = "LONGTEXT")
     private String avatarImage;
     private String avatarColor;
 }

@@ -1,6 +1,7 @@
 package com.proyectodam.controllers;
 
 import com.proyectodam.model.mysql.Usuario;
+import com.proyectodam.repository.mysql.UsuarioRepository;
 import com.proyectodam.service.UsuarioService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -16,9 +17,22 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/usuarios")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
+
+    @GetMapping("/by-username/{nickname}")
+    public ResponseEntity<?> getByNickname(@PathVariable String nickname) {
+        return usuarioRepository.findByNickname(nickname)
+            .map(u -> ResponseEntity.ok(Map.of(
+                "nickname",    u.getNickname(),
+                "avatarImage", u.getAvatarImage() != null ? u.getAvatarImage() : "",
+                "avatarColor", u.getAvatarColor() != null ? u.getAvatarColor() : "#8b5cf6"
+            )))
+            .orElse(ResponseEntity.notFound().build());
+    }
 
     // RF-03
     @PostMapping

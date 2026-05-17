@@ -4,6 +4,7 @@ import com.proyectodam.model.mysql.Sala;
 import com.proyectodam.model.mysql.SalaJugador;
 import com.proyectodam.repository.mysql.SalaJugadorRepository;
 import com.proyectodam.repository.mysql.SalaRepository;
+import com.proyectodam.repository.mysql.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ public class SalaService {
 
     private final SalaRepository salaRepository;
     private final SalaJugadorRepository salaJugadorRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional
     public Sala crearSala(Sala salaReq) {
@@ -54,6 +56,13 @@ public class SalaService {
 
         if (sala.getJugadores().size() < sala.getMaxJugadores()) {
             salaJugadorRepository.deleteBySala_IdAndNombre(salaId, participante.getNombre());
+            // Populate avatar from the user's stored profile so the client never needs to send it
+            usuarioRepository.findByNickname(participante.getNombre()).ifPresent(u -> {
+                participante.setAvatarImage(u.getAvatarImage());
+                if (participante.getAvatarColor() == null) {
+                    participante.setAvatarColor(u.getAvatarColor());
+                }
+            });
             participante.setSala(sala);
             salaJugadorRepository.save(participante);
         }

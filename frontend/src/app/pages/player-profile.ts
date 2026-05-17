@@ -19,7 +19,8 @@ interface PlayerStatsDto {
   regionMastery: Record<string, RegionMastery>;
 }
 
-const STATS_API = 'http://51.107.3.232/api/stats';
+const STATS_API   = 'http://51.107.3.232/api/stats';
+const USERS_API   = 'http://51.107.3.232/api/usuarios';
 
 const XP_THRESHOLDS = [0, 10, 25, 45, 70, 100, 135, 175, 220, 270];
 
@@ -85,8 +86,11 @@ function xpPercentInLevel(xp: number, level: number): number {
         <div class="banner glass-panel">
           <div class="banner-bg"></div>
           <div class="banner-content">
-            <div class="avatar-circle" [style.background]="avatarBg()">
-              <span class="avatar-letter">{{ stats()!.username[0].toUpperCase() }}</span>
+            <div class="avatar-circle"
+              [style.background]="avatarImage() ? 'url(' + avatarImage() + ') center/cover no-repeat' : avatarBg()">
+              @if (!avatarImage()) {
+                <span class="avatar-letter">{{ stats()!.username[0].toUpperCase() }}</span>
+              }
             </div>
             <div class="banner-info">
               <div class="banner-top">
@@ -297,9 +301,10 @@ export class PlayerProfile implements OnInit {
   private http   = inject(HttpClient);
   private auth   = inject(AuthService);
 
-  loading = signal(true);
-  error   = signal(false);
-  stats   = signal<PlayerStatsDto | null>(null);
+  loading     = signal(true);
+  error       = signal(false);
+  stats       = signal<PlayerStatsDto | null>(null);
+  avatarImage = signal<string>('');
 
   isOwnProfile = computed(() => {
     const me = this.auth.currentUser()?.username;
@@ -355,10 +360,12 @@ export class PlayerProfile implements OnInit {
     }
 
     try {
-      const data = await firstValueFrom(
-        this.http.get<PlayerStatsDto>(`${STATS_API}/${encodeURIComponent(username)}`)
-      );
+      const [data, profile] = await Promise.all([
+        firstValueFrom(this.http.get<PlayerStatsDto>(`${STATS_API}/${encodeURIComponent(username)}`)),
+        firstValueFrom(this.http.get<any>(`${USERS_API}/by-username/${encodeURIComponent(username)}`)).catch(() => null)
+      ]);
       this.stats.set(data);
+      if (profile?.avatarImage) this.avatarImage.set(profile.avatarImage);
     } catch {
       this.error.set(true);
     } finally {

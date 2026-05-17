@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD, jakarta.servlet.DispatcherType.ERROR).permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/salas/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/stats/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/usuarios/by-username/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/ranking/**").permitAll()
