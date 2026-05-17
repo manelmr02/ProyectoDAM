@@ -16,7 +16,7 @@ import { AuthService } from '../services/auth.service';
     <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
                         <div class="hero-content">
         <span class="badge">Batalla legendaria</span>
-        <h1>Domina la <span class="highlight-gradient">Grieta</span></h1>
+        <h1>Domina <span class="highlight-gradient">Runaterra</span></h1>
         <p class="subtitle">Elige a tu región, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
 
         <div class="action-panel glass-panel">
@@ -29,7 +29,7 @@ import { AuthService } from '../services/auth.service';
               <span class="pulse-ring"></span>
               ⚔ CREAR PARTIDA
             </button>
-            <div class="action-divider"></div>
+            <div class="action-divider">VS</div>
             <button routerLink="/ranking" class="btn btn-secondary ranking-btn">
               CLASIFICACIÓN
             </button>
