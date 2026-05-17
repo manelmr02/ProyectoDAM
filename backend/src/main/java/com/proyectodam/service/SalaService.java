@@ -94,7 +94,26 @@ public class SalaService {
                     j.setStatus(estado);
                     salaJugadorRepository.save(j);
                 });
-        return salaRepository.findById(salaId).orElse(null);
+
+        Sala sala = salaRepository.findById(salaId).orElse(null);
+        if (sala != null) {
+            boolean allReady = sala.getJugadores().size() >= 2
+                    && sala.getJugadores().stream().allMatch(j -> "Ready".equals(j.getStatus()));
+            if (allReady && sala.getStartReadyTime() == null) {
+                sala.setStartReadyTime(System.currentTimeMillis());
+                salaRepository.save(sala);
+            }
+        }
+        return sala;
+    }
+
+    @Transactional
+    public Sala iniciarPartida(Long salaId) {
+        Sala sala = salaRepository.findById(salaId).orElse(null);
+        if (sala == null) return null;
+        sala.setEstado("IN_GAME");
+        sala.setStartReadyTime(sala.getStartReadyTime() != null ? sala.getStartReadyTime() : System.currentTimeMillis());
+        return salaRepository.save(sala);
     }
 
     @Transactional

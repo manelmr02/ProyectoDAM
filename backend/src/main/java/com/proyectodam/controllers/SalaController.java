@@ -79,14 +79,14 @@ public class SalaController {
                                                   @RequestParam String username,
                                                   @RequestParam String estado) {
         Sala sala = salaService.actualizarEstadoJugador(id, username, estado);
-        if (sala != null) {
-            boolean allReady = sala.getJugadores().size() >= 2
-                    && sala.getJugadores().stream().allMatch(j -> "Ready".equals(j.getStatus()));
-            if (allReady) {
-                sala.setStartReadyTime(System.currentTimeMillis());
-            }
-            broadcast(id, sala);
-        }
+        if (sala != null) broadcast(id, sala);
+        return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/iniciar")
+    public ResponseEntity<Sala> iniciarPartida(@PathVariable Long id) {
+        Sala sala = salaService.iniciarPartida(id);
+        if (sala != null) broadcast(id, sala);
         return sala != null ? ResponseEntity.ok(sala) : ResponseEntity.notFound().build();
     }
 }

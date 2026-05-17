@@ -29,6 +29,6 @@ public class Sala {
     @JsonIgnoreProperties("sala")
     private List<SalaJugador> jugadores = new ArrayList<>();
 
-    @Transient
+    @Column(name = "start_ready_time")
     private Long startReadyTime;
 }

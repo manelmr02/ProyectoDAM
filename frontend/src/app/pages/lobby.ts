@@ -437,6 +437,12 @@ export class Lobby implements OnInit, OnDestroy {
         return;
       }
 
+      // If the game already started, redirect straight to battle
+      if (found.status === 'IN_GAME') {
+        this.router.navigate(['/battle', found.id]);
+        return;
+      }
+
       // Auto-join if not in list
       const isMember = found.playerList.some(p => p.name === this.myName());
       if (!isMember && found.players < found.maxPlayers && found.status === 'LOBBY') {
@@ -641,6 +647,7 @@ export class Lobby implements OnInit, OnDestroy {
         this.stopCountdown();
         this.gameStarted = true;
         const lobbyId = this.lobby()?.id;
+        this.lobbyService.startGame(lobbyId!);
         this.router.navigate(['/battle', lobbyId]);
       }
     }, 500); // Check more frequently for better sync

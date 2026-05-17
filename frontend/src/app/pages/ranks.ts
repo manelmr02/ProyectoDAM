@@ -162,12 +162,12 @@ const DIVISIONS = ['IV', 'III', 'II', 'I'];
           </div>
           <div class="tip-card">
             <span class="tip-num">03</span>
-            <h4>Ítems de economía</h4>
+            <h4>Ítems</h4>
             <p>Los ítems de ingreso (+oro/turno) son los más valiosos a largo plazo. Priorízalos.</p>
           </div>
           <div class="tip-card">
             <span class="tip-num">04</span>
-            <h4>Aprende los ultes</h4>
+            <h4>Aprende las ultimates</h4>
             <p>Cada facción tiene una habilidad especial. Conocerlas marca la diferencia en los turnos clave.</p>
           </div>
         </div>
@@ -240,9 +240,10 @@ const DIVISIONS = ['IV', 'III', 'II', 'I'];
     .ladder-tier:hover { transform: translateX(4px); box-shadow: 0 0 16px var(--tier-glow); }
     .tier-bar {
       position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
-      border-radius: 4px 0 0 4px;
+      border-radius: 4px 0 0 4px; opacity: 0.18; transition: width 0.3s ease;
     }
     .tier-content {
+      position: relative; z-index: 1;
       display: grid; grid-template-columns: 220px 1fr 1fr;
       align-items: center; gap: 16px; padding: 14px 16px 14px 24px;
     }

@@ -202,4 +202,11 @@ export class LobbyService {
       this.http.put<any>(`${this.API_URL}/${lobbyId}/faccion?username=${encodeURIComponent(playerName)}&faccion=${encodeURIComponent(newFaction)}`, {})
     );
   }
+
+  async startGame(id: string | number) {
+    try {
+      await firstValueFrom(this.http.put(`${this.API_URL}/${id}/iniciar`, {}));
+      this.refreshLobbies();
+    } catch { /* non-critical, clients will redirect via startReadyTime */ }
+  }
 }

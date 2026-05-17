@@ -51,7 +51,7 @@ const TYPE_META: Record<string, { label: string; color: string; icon: string; de
   coins:         { label: 'Oro inmediato',  color: '#FBBF24', icon: '💰', desc: 'Otorgan oro al instante para reforzar o invertir.' },
   income:        { label: 'Ingreso',        color: '#06B6D4', icon: '📈', desc: 'Aumentan el oro recibido cada turno de forma permanente.' },
   reinforce:     { label: 'Refuerzo',       color: '#C084FC', icon: '⚒️', desc: 'Reducen el coste de refuerzo de tu región.' },
-  resetReinforce:{ label: 'Seguro',         color: '#FF6B6B', icon: '🔁', desc: 'Cancelan automáticamente el próximo fallo en un ataque.' },
+  resetReinforce:{ label: 'Seguro',         color: '#FF6B6B', icon: '🔁', desc: 'Cancelan automáticamente el próximo fallo en un refuerzo.' },
 };
 
 const TYPE_ORDER: GameItem['type'][] = ['lives', 'income', 'coins', 'reinforce', 'resetReinforce'];
