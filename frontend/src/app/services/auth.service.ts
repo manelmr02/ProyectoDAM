@@ -215,6 +215,26 @@ export class AuthService {
     this.router.navigate(['/']);
   }
 
+  async checkEmail(email: string): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.get(`${this.apiUrl}/check-email?email=${encodeURIComponent(email)}`));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async resetPassword(email: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.apiUrl}/reset-password`, { email, newPassword })
+      );
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.error?.error || 'Email no encontrado.' };
+    }
+  }
+
   /** Update profile fields (persists to localStorage) */
   updateProfile(updates: Partial<UserProfile>): { ok: boolean; error?: string } {
     const current = this.currentUser();

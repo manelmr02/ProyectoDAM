@@ -39,6 +39,18 @@ public class AuthService {
         return createAuthResponse(usuario);
     }
 
+    public boolean emailExists(String email) {
+        return usuarioRepository.existsByEmail(email);
+    }
+
+    public java.util.Map<String, String> resetPassword(String email, String newPassword) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("No existe ninguna cuenta con ese email."));
+        usuario.setPassword(passwordEncoder.encode(newPassword));
+        usuarioRepository.save(usuario);
+        return java.util.Map.of("message", "Contraseña actualizada correctamente.");
+    }
+
     public AuthDtos.AuthResponse register(AuthDtos.RegisterRequest req) {
         if (usuarioRepository.existsByNickname(req.getUsername())) {
             throw new BadRequestException("El nombre de usuario '" + req.getUsername() + "' ya está registrado.");

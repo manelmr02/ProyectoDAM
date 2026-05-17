@@ -32,4 +32,20 @@ public class AuthController {
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("message", "Sesión cerrada correctamente."));
     }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        boolean exists = authService.emailExists(email.trim());
+        return exists ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        String email       = body.get("email");
+        String newPassword = body.get("newPassword");
+        if (email == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Datos inválidos."));
+        }
+        return ResponseEntity.ok(authService.resetPassword(email.trim(), newPassword));
+    }
 }

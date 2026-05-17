@@ -71,11 +71,104 @@ import { AuthService } from '../services/auth.service';
           </button>
         </form>
 
+        <div class="forgot-link-row">
+          <button type="button" class="forgot-link" (click)="openForgot()">¿Olvidaste tu contraseña?</button>
+        </div>
+
         <p class="auth-footer">
           ¿No tienes una cuenta aún? <a routerLink="/register">Regístrate aquí</a>
         </p>
       </div>
     </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    @if (forgotOpen()) {
+      <div class="modal-backdrop" (click)="closeForgot()">
+        <div class="modal-box glass-panel animate-modal" (click)="$event.stopPropagation()">
+
+          <div class="modal-head">
+            <span class="modal-icon-big">🔑</span>
+            <div>
+              <h3>Recuperar contraseña</h3>
+              <p class="text-muted" style="font-size:0.85rem;">
+                @if (forgotStep() === 1) { Introduce tu email para verificar tu cuenta. }
+                @else { Introduce tu nueva contraseña. }
+              </p>
+            </div>
+            <button class="close-btn" (click)="closeForgot()">✕</button>
+          </div>
+
+          <!-- STEP 1: email -->
+          @if (forgotStep() === 1) {
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Email de la cuenta</label>
+                <input type="email" class="form-control" placeholder="correo@dominio.com"
+                  [(ngModel)]="forgotEmail" name="forgotEmail" (keyup.enter)="verifyEmail()">
+              </div>
+              @if (forgotError()) {
+                <div class="alert alert-error" style="margin-top:10px;">✖ {{ forgotError() }}</div>
+              }
+              <div class="modal-actions">
+                <button class="btn btn-secondary" (click)="closeForgot()">Cancelar</button>
+                <button class="btn btn-primary" [disabled]="forgotLoading() || !forgotEmail.trim()" (click)="verifyEmail()">
+                  @if (forgotLoading()) { <span class="spinner"></span> } @else { Verificar →  }
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- STEP 2: new password -->
+          @if (forgotStep() === 2) {
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Nueva contraseña <span class="required">*</span></label>
+                <div class="input-with-toggle">
+                  <input [type]="showNewPass() ? 'text' : 'password'" class="form-control"
+                    placeholder="Mínimo 6 caracteres" [(ngModel)]="newPassword" name="newPassword">
+                  <button type="button" class="toggle-eye" (click)="showNewPass.set(!showNewPass())">
+                    {{ showNewPass() ? '🙈' : '👁' }}
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Confirmar contraseña <span class="required">*</span></label>
+                <div class="input-with-toggle">
+                  <input [type]="showNewPass() ? 'text' : 'password'" class="form-control"
+                    [class.invalid]="newPassword && confirmPassword && newPassword !== confirmPassword"
+                    placeholder="Repite la contraseña" [(ngModel)]="confirmPassword" name="confirmPassword">
+                </div>
+                @if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+                  <span class="field-error">Las contraseñas no coinciden.</span>
+                }
+              </div>
+              @if (forgotError()) {
+                <div class="alert alert-error" style="margin-top:10px;">✖ {{ forgotError() }}</div>
+              }
+              <div class="modal-actions">
+                <button class="btn btn-secondary" (click)="forgotStep.set(1)">← Atrás</button>
+                <button class="btn btn-primary"
+                  [disabled]="forgotLoading() || newPassword.length < 6 || newPassword !== confirmPassword"
+                  (click)="submitNewPassword()">
+                  @if (forgotLoading()) { <span class="spinner"></span> } @else { Guardar contraseña }
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- STEP 3: success -->
+          @if (forgotStep() === 3) {
+            <div class="modal-body success-body">
+              <div class="success-icon">✅</div>
+              <p>Contraseña actualizada correctamente.</p>
+              <p class="text-muted" style="font-size:0.85rem;">Ya puedes iniciar sesión con tu nueva contraseña.</p>
+              <button class="btn btn-primary" style="margin-top:16px;" (click)="closeForgot()">Entendido</button>
+            </div>
+          }
+
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .auth-container { display: flex; justify-content: center; align-items: flex-start; padding: 60px 16px; }
@@ -133,6 +226,55 @@ import { AuthService } from '../services/auth.service';
     .auth-footer { margin-top: 24px; font-size: 0.9rem; color: var(--text-muted); }
     .auth-footer a { color: var(--accent-secondary); text-decoration: none; font-weight: 600; }
     .auth-footer a:hover { text-decoration: underline; }
+
+    .forgot-link-row { margin-top: 12px; text-align: center; }
+    .forgot-link {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent-secondary); font-size: 0.85rem; font-family: var(--font-body);
+      text-decoration: underline; padding: 0;
+    }
+    .forgot-link:hover { color: var(--accent-primary); }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center; padding: 16px;
+    }
+    .modal-box {
+      width: 100%; max-width: 440px;
+      padding: 28px 28px 24px;
+      border-radius: 16px;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.92) translateY(12px); }
+      to   { opacity: 1; transform: scale(1)    translateY(0); }
+    }
+    .animate-modal { animation: modalIn 0.22s ease both; }
+
+    .modal-head {
+      display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px;
+    }
+    .modal-head h3 { margin: 0 0 2px; font-size: 1.15rem; }
+    .modal-icon-big { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+    .close-btn {
+      margin-left: auto; background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 1.1rem; padding: 4px 6px;
+      border-radius: 6px; transition: background 0.15s;
+    }
+    .close-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+
+    .modal-body { display: flex; flex-direction: column; gap: 14px; }
+
+    .modal-actions {
+      display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;
+    }
+
+    .success-body {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 8px; text-align: center; padding: 8px 0;
+    }
+    .success-icon { font-size: 2.8rem; line-height: 1; }
   `]
 })
 export class Login {
@@ -145,6 +287,58 @@ export class Login {
   errorMsg     = signal('');
   showPassword = signal(false);
 
+  // ── Forgot password ────────────────────────────────────────────
+  forgotOpen    = signal(false);
+  forgotStep    = signal<1 | 2 | 3>(1);
+  forgotLoading = signal(false);
+  forgotError   = signal('');
+  forgotEmail   = '';
+  newPassword   = '';
+  confirmPassword = '';
+  showNewPass   = signal(false);
+
+  openForgot() {
+    this.forgotEmail = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.forgotError.set('');
+    this.forgotStep.set(1);
+    this.forgotOpen.set(true);
+  }
+
+  closeForgot() {
+    this.forgotOpen.set(false);
+  }
+
+  async verifyEmail() {
+    const email = this.forgotEmail.trim();
+    if (!email) return;
+    this.forgotLoading.set(true);
+    this.forgotError.set('');
+    const exists = await this.auth.checkEmail(email);
+    this.forgotLoading.set(false);
+    if (exists) {
+      this.forgotStep.set(2);
+    } else {
+      this.forgotError.set('No existe ninguna cuenta con ese email.');
+    }
+  }
+
+  async submitNewPassword() {
+    if (this.newPassword !== this.confirmPassword || this.newPassword.length < 6) return;
+    this.forgotLoading.set(true);
+    this.forgotError.set('');
+    const result = await this.auth.resetPassword(this.forgotEmail.trim(), this.newPassword);
+    this.forgotLoading.set(false);
+    if (result.ok) {
+      this.forgotStep.set(3);
+    } else {
+      this.forgotError.set(result.error ?? 'Error al actualizar la contraseña.');
+      this.forgotStep.set(1);
+    }
+  }
+
+  // ── Login ──────────────────────────────────────────────────────
   async onSubmit(): Promise<void> {
     this.errorMsg.set('');
     this.loading.set(true);
