@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
+import { ClanService } from '../services/clan.service';
 import { firstValueFrom } from 'rxjs';
 
 interface RegionMastery { games: number; wins: number; xp: number; level: number; }
@@ -86,11 +87,14 @@ function xpPercentInLevel(xp: number, level: number): number {
         <div class="banner glass-panel">
           <div class="banner-bg"></div>
           <div class="banner-content">
-            <div class="avatar-circle"
-              [style.background]="avatarImage() ? 'url(' + avatarImage() + ') center/cover no-repeat' : avatarBg()">
-              @if (!avatarImage()) {
-                <span class="avatar-letter">{{ stats()!.username[0].toUpperCase() }}</span>
-              }
+            <div class="avatar-wrap">
+              <div class="avatar-circle"
+                [style.background]="avatarImage() ? 'url(' + avatarImage() + ') center/cover no-repeat' : avatarBg()">
+                @if (!avatarImage()) {
+                  <span class="avatar-letter">{{ stats()!.username[0].toUpperCase() }}</span>
+                }
+              </div>
+              <div class="avatar-level-badge">LV.{{ displayLevel() }}</div>
             </div>
             <div class="banner-info">
               <div class="banner-top">
@@ -104,6 +108,13 @@ function xpPercentInLevel(xp: number, level: number): number {
                 <span class="lp-badge">{{ stats()!.lp }} LP</span>
               </div>
               <div class="banner-meta">
+                @if (clanName()) {
+                  <span class="meta-chip clan-chip">
+                    ⚔
+                    @if (clanTag()) { <b>[{{ clanTag() }}]</b> }
+                    {{ clanName() }}
+                  </span>
+                }
                 <span class="meta-chip">🏆 {{ stats()!.wins }} victorias</span>
                 <span class="meta-chip">💀 {{ stats()!.losses }} derrotas</span>
                 <span class="meta-chip">🎮 {{ stats()!.gamesPlayed }} partidas</span>
@@ -200,12 +211,20 @@ function xpPercentInLevel(xp: number, level: number): number {
       background: linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(6,182,212,0.08) 50%, rgba(16,185,129,0.06) 100%);
     }
     .banner-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 24px; padding: 32px 36px; flex-wrap: wrap; }
+    .avatar-wrap { position: relative; flex-shrink: 0; width: 90px; }
     .avatar-circle {
-      width: 90px; height: 90px; border-radius: 50%; flex-shrink: 0;
+      width: 90px; height: 90px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 0 24px rgba(139,92,246,0.3); border: 3px solid rgba(255,255,255,0.15);
     }
+    .avatar-level-badge {
+      position: absolute; bottom: -2px; right: -4px;
+      background: var(--accent-primary); color: white; padding: 2px 7px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 800; border: 2px solid #1a1a2e;
+      box-shadow: 0 0 10px rgba(139,92,246,0.5); font-family: var(--font-heading); z-index: 2;
+    }
     .avatar-letter { font-size: 2.4rem; font-weight: 800; color: white; font-family: var(--font-heading); }
+    .clan-chip { color: var(--accent-gold) !important; border-color: rgba(245,158,11,0.25) !important; background: rgba(245,158,11,0.08) !important; }
     .banner-info { flex: 1; display: flex; flex-direction: column; gap: 10px; }
     .banner-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .username {
@@ -296,15 +315,25 @@ function xpPercentInLevel(xp: number, level: number): number {
   `]
 })
 export class PlayerProfile implements OnInit {
-  private route  = inject(ActivatedRoute);
-  private router = inject(Router);
-  private http   = inject(HttpClient);
-  private auth   = inject(AuthService);
+  private route       = inject(ActivatedRoute);
+  private router      = inject(Router);
+  private http        = inject(HttpClient);
+  private auth        = inject(AuthService);
+  private clanService = inject(ClanService);
 
   loading     = signal(true);
   error       = signal(false);
   stats       = signal<PlayerStatsDto | null>(null);
   avatarImage = signal<string>('');
+  clanName    = signal<string>('');
+  clanTag     = signal<string>('');
+
+  displayLevel = computed(() => {
+    const s = this.stats();
+    if (!s) return 1;
+    const xp = s.gamesPlayed * 10 + s.wins * 20;
+    return Math.floor(Math.sqrt(xp / 15)) + 1;
+  });
 
   isOwnProfile = computed(() => {
     const me = this.auth.currentUser()?.username;
@@ -366,6 +395,11 @@ export class PlayerProfile implements OnInit {
       ]);
       this.stats.set(data);
       if (profile?.avatarImage) this.avatarImage.set(profile.avatarImage);
+      if (profile?.clan) {
+        this.clanName.set(profile.clan);
+        const found = this.clanService.getClanByTagOrName(profile.clan);
+        if (found) this.clanTag.set(found.tag);
+      }
     } catch {
       this.error.set(true);
     } finally {

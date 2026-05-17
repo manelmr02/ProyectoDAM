@@ -29,5 +29,11 @@ public class SchemaMigrationRunner implements ApplicationRunner {
                 "ALTER TABLE sala_jugadores MODIFY COLUMN avatar_image LONGTEXT"
             );
         } catch (Exception ignored) {}
+
+        try {
+            jdbcTemplate.execute(
+                "UPDATE usuarios SET created_at = NOW() WHERE created_at IS NULL"
+            );
+        } catch (Exception ignored) {}
     }
 }

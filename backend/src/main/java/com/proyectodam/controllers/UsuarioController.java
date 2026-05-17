@@ -32,6 +32,7 @@ public class UsuarioController {
                 data.put("avatarImage", u.getAvatarImage() != null ? u.getAvatarImage() : "");
                 data.put("avatarColor", u.getAvatarColor() != null ? u.getAvatarColor() : "#8b5cf6");
                 data.put("createdAt",   u.getCreatedAt() != null ? u.getCreatedAt().toString() : "");
+                data.put("clan",        u.getClan() != null ? u.getClan() : "");
                 return ResponseEntity.ok(data);
             })
             .orElse(ResponseEntity.notFound().build());

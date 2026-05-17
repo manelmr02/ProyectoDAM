@@ -165,10 +165,7 @@ const MASTERY_LABELS: Record<number, string> = {
                   <label for="edit-clan">Clan a unirse o crear (Nombre)</label>
                   <input id="edit-clan" type="text" class="form-control"
                     placeholder="Nombre del clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
-
-                  <label for="edit-clan-tag" style="margin-top: 8px;">Tag del clan</label>
-                  <input id="edit-clan-tag" type="text" class="form-control"
-                    placeholder="Ej: DAM, STK" [(ngModel)]="draft.clanTag" name="clanTag" maxlength="4" style="text-transform: uppercase;">
+                  <p class="form-hint">Escribe el nombre exacto de un clan para unirte, o un nombre nuevo para crearlo.</p>
                 </div>
               }
 
@@ -773,13 +770,15 @@ export class Profile implements OnInit {
 
     if (clanChanged || tagChanged) {
       if (this.draft.clan && !this.user()!.clanTag) {
-        if (this.draft.clanTag) {
-          const res = this.clanService.createClan(this.draft.clan.trim(), this.draft.clanTag.trim(), this.user()!.username);
+        const existing = this.clanService.getClanByTagOrName(this.draft.clan.trim());
+        if (existing) {
+          const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
           if (!res.ok) { this.saveMsg.set('Error: ' + res.error); return; }
           this.draft.clanTag = res.clan!.tag;
           this.draft.clan    = res.clan!.name;
         } else {
-          const res = this.clanService.joinClan(this.draft.clan.trim(), this.user()!.username);
+          const autoTag = this.draft.clan.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'CLN';
+          const res = this.clanService.createClan(this.draft.clan.trim(), autoTag, this.user()!.username);
           if (!res.ok) { this.saveMsg.set('Error: ' + res.error); return; }
           this.draft.clanTag = res.clan!.tag;
           this.draft.clan    = res.clan!.name;
