@@ -44,6 +44,7 @@ public class AuthDtos {
         private String clan;
         private String clanTag;
         private String avatarColor;
+        private String avatarImage;
         private String bio;
         private int level;
         private UserStatsDto stats;

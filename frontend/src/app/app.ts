@@ -1,12 +1,11 @@
 import { Component, computed, inject, signal, ViewEncapsulation } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth.service';
 import { LobbyService } from './services/lobby.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
   styleUrl: './app.css',
   encapsulation: ViewEncapsulation.None
@@ -57,5 +56,6 @@ export class App {
     this.auth.logout();
     this.showLogoutModal.set(false);
     this.isMobileMenuOpen.set(false);
+    this.router.navigate(['/login']);
   }
 }

@@ -1,6 +1,8 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { AuthService } from './auth.service';
 import { ProfanityService } from './profanity.service';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,21 +19,17 @@ export interface LobbyPlayer {
 }
 
 export interface LobbyEntry {
-  id: number;
+  id: string; // MongoDB ID
   name: string;
   host: string;
   description: string;
   players: number;
   maxPlayers: number;
-  status: 'Esperando' | 'En curso';
+  status: 'LOBBY' | 'IN_GAME' | 'FINISHED';
   mode: string;
   hasPassword: boolean;
   password?: string;
-  isOwn?: boolean;
-  createdAt: string;
-  /** Full player list for when you're inside the lobby */
   playerList: LobbyPlayer[];
-  /** Timestamp when the countdown started (all ready) */
   startReadyTime?: number | null;
 }
 
@@ -45,332 +43,163 @@ export interface CreateLobbyDto {
   faction?: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = 'payload_lobbies';
-const STORAGE_VER = 'payload_lobbies_ver';
-const CURRENT_VER = 2; // Incremented to force update Batalla Epica seed
-
-const AVATAR_COLORS = [
-  '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-  '#ef4444', '#ec4899', '#3b82f6', '#84cc16',
-];
-
-// Pool of Champions/Regions to populate lobbies
-const NPC_POOL: { name: string; clan: string }[] = [
-  { name: 'Garen',   clan: 'Demacia' },
-  { name: 'Darius',  clan: 'Noxus' },
-  { name: 'Irelia',  clan: 'Ionia' },
-  { name: 'Ashe',    clan: 'Freljord' },
-  { name: 'Vi',      clan: 'Piltover' },
-  { name: 'Jinx',    clan: 'Zaun' },
-  { name: 'Azir',    clan: 'Shurima' },
-  { name: 'Thresh',  clan: 'Shadow Isles' },
-  { name: 'Leona',   clan: 'Targon' },
-  { name: 'Miss Fortune', clan: 'Bilgewater' },
-  { name: 'Qiyana',  clan: 'Ixtal' },
-  { name: 'Kha\'Zix', clan: 'The Void' },
-];
-
-const NPC_CHATS: { sender: string; text: string }[] = [
-  { sender: 'ComandanteRex',  text: 'Prepárense para caer.' },
-  { sender: 'NightStalker',   text: 'Esta vez no habrá piedad.' },
-  { sender: 'IronFalcon',     text: '¿Alguien tiene estrategia?' },
-  { sender: 'GhostReaper',    text: 'El mejor gana. Siempre.' },
-  { sender: 'ThunderBolt',    text: 'Vamos a por todas!' },
-  { sender: 'DarkPhoenix',    text: 'Primera vez aquí, pero no seré el último.' },
-  { sender: 'ShadowMind',     text: 'Silencio es poder.' },
-  { sender: 'CrimsonBlade',   text: 'La defensa gana campeonatos.' },
-  { sender: 'NovaCaptain',    text: '¿Alguien ataca primero?' },
-];
-
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
 export class LobbyService {
   private auth = inject(AuthService);
   private profanity = inject(ProfanityService);
-  private readonly onStorageChange = (event: StorageEvent) => {
-    if (event.key && event.key !== STORAGE_KEY && event.key !== STORAGE_VER) return;
-    this.syncFromStorage();
-  };
-  private readonly onWindowFocus = () => this.syncFromStorage();
+  private http = inject(HttpClient);
+  private readonly API_URL = 'http://51.107.3.232/api/salas';
 
   /** All lobbies — reactive signal */
-  readonly lobbies = signal<LobbyEntry[]>(this.load());
+  readonly lobbies = signal<LobbyEntry[]>([]);
 
   readonly activeCount = computed(
-    () => this.lobbies().filter(l => l.status === 'Esperando').length
+    () => this.lobbies().filter(l => l.status === 'LOBBY').length
   );
 
   constructor() {
-    window.addEventListener('storage', this.onStorageChange);
-    window.addEventListener('focus', this.onWindowFocus);
-    document.addEventListener('visibilitychange', this.onWindowFocus);
+    this.refreshLobbies();
+    // Polling fallback cada 5s para sincronización
+    setInterval(() => this.refreshLobbies(), 5000);
   }
 
-  // ── Persistence ─────────────────────────────────────────────────────────────
-
-  private load(): LobbyEntry[] {
+  async refreshLobbies() {
     try {
-      const ver = Number(localStorage.getItem(STORAGE_VER) ?? '0');
-      const raw = localStorage.getItem(STORAGE_KEY);
-      let saved: LobbyEntry[] = raw ? JSON.parse(raw) : [];
-
-      // Migration/Reset if version changed
-      if (ver < CURRENT_VER) {
-        const userLobbies = saved.filter(l => l.isOwn);
-        const seeds = this.seedLobbies();
-        // Merge user lobbies with new seeds
-        return [...userLobbies, ...seeds];
-      }
-
-      if (saved.length === 0) return this.seedLobbies();
-      return saved;
-    } catch {
-      return this.seedLobbies();
+      const data = await firstValueFrom(this.http.get<any[]>(this.API_URL));
+      const mapped: LobbyEntry[] = data.map(s => this.mapToLobbyEntry(s));
+      this.lobbies.set(mapped);
+    } catch (error) {
+      console.error('Error al cargar salas:', error);
     }
   }
 
-  private save(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.lobbies()));
-    localStorage.setItem(STORAGE_VER, CURRENT_VER.toString());
-  }
-
-  private syncFromStorage(): void {
-    const latest = this.load();
-    const current = this.lobbies();
-    if (JSON.stringify(latest) !== JSON.stringify(current)) {
-      this.lobbies.set(latest);
-    }
-  }
-
-  // ── Seed (initial demo data) ─────────────────────────────────────────────────
-
-  private seedLobbies(): LobbyEntry[] {
-    const seed: LobbyEntry[] = [
-      {
-        id: 4029,
-        name: 'Guerra por la Grieta',
-        host: 'Garen',
-        description: 'Demacia no retrocede.',
-        players: 4,
-        maxPlayers: 10,
-        status: 'Esperando',
-        mode: 'SoloQ',
-        hasPassword: false,
-        createdAt: new Date().toISOString(),
-        playerList: this.buildNpcList(['Garen', 'Darius', 'Irelia', 'Ashe'], 'Garen'),
-      },
-      {
-        id: 4030,
-        name: 'Dominación Noxiana',
-        host: 'Darius',
-        description: 'La fuerza prevalece.',
-        players: 7,
-        maxPlayers: 10,
-        status: 'Esperando',
-        mode: 'DuoQ',
-        hasPassword: true,
-        password: '1234',
-        createdAt: new Date().toISOString(),
-        playerList: this.buildNpcList(
-          ['Darius','Thresh','Miss Fortune','Jinx','Vi','Leona','Azir'],
-          'Darius'
-        ),
-      },
-    ];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    return seed;
-  }
-
-  private buildNpcList(names: string[], owner: string): LobbyPlayer[] {
-    return names.map((name, i) => {
-      const npc = NPC_POOL.find(n => n.name === name);
-      return {
-        name,
-        clan: npc?.clan ?? '',
-        status: Math.random() > 0.5 ? 'Ready' : 'Waiting',
-        isOwner: name === owner,
-        avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
-      };
-    });
+  mapToLobbyEntry(s: any): LobbyEntry {
+    return {
+      id: s.id,
+      name: s.nombre,
+      host: s.creador,
+      description: s.nombre,
+      players: s.jugadores?.length || 0,
+      maxPlayers: s.maxJugadores,
+      status: s.estado || 'LOBBY',
+      mode: 'Standard',
+      hasPassword: s.esPrivada,
+      startReadyTime: s.startReadyTime ?? null,
+      playerList: (s.jugadores || []).map((p: any) => ({
+        name: p.nombre,
+        faction: p.faction,
+        status: p.status,
+        avatarImage: p.avatarImage,
+        avatarColor: p.avatarColor,
+        isOwner: p.nombre === s.creador,
+        clan: ''
+      }))
+    };
   }
 
   // ── Public API ───────────────────────────────────────────────────────────────
 
-  getLobbyById(id: number): LobbyEntry | undefined {
-    return this.lobbies().find(l => l.id === id);
+  async getLobbyById(id: string | number): Promise<LobbyEntry | undefined> {
+    try {
+      const s = await firstValueFrom(this.http.get<any>(`${this.API_URL}/${id}`));
+      const mapped = this.mapToLobbyEntry(s);
+      
+      // Actualizamos la sala en nuestra lista local si ya existe
+      this.lobbies.update(list => {
+        const index = list.findIndex(l => l.id.toString() === id.toString());
+        if (index !== -1) {
+          const newList = [...list];
+          newList[index] = mapped;
+          return newList;
+        }
+        return [...list, mapped];
+      });
+
+      return mapped;
+    } catch (e) {
+      // Si falla la red o no existe, intentamos el local como último recurso
+      return this.lobbies().find(l => l.id.toString() === id.toString());
+    }
   }
 
-  /** Returns the lobby the given username is currently in, either as host or player */
   getUserLobby(username: string): LobbyEntry | undefined {
     return this.lobbies().find(l => l.playerList.some(p => p.name === username));
   }
 
-  /** Deletes a lobby by ID (only the owner should call this) */
-  deleteLobby(id: number): void {
-    this.lobbies.update(list => list.filter(l => l.id !== id));
-    this.save();
+  async deleteLobby(id: string | number) {
+    await firstValueFrom(this.http.delete(`${this.API_URL}/${id}`));
+    this.refreshLobbies();
   }
 
-  createLobby(dto: CreateLobbyDto): LobbyEntry {
+  async createLobby(dto: CreateLobbyDto): Promise<LobbyEntry> {
     const user = this.auth.currentUser();
-    if (!user) {
-      throw new Error('No has iniciado sesión.');
-    }
-    const host = user.username;
+    if (!user) throw new Error('No has iniciado sesión.');
 
-    // Prevent creating multiple rooms: remove all previous owned rooms
-    this.lobbies.update(list => list.filter(l => !(l.isOwn && l.host === host)));
-
-    if (this.profanity.hasProfanity(dto.name) || this.profanity.hasProfanity(dto.description)) {
-      throw new Error('El nombre o descripción de la sala contiene palabras no permitidas.');
+    if (this.profanity.hasProfanity(dto.name)) {
+      throw new Error('El nombre de la sala contiene palabras no permitidas.');
     }
 
-    const authorColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-
-    const lobby: LobbyEntry = {
-      id: Date.now() % 100000,
-      name: dto.name,
-      description: dto.description,
-      host,
-      players: 1,
-      maxPlayers: dto.maxPlayers,
-      status: 'Esperando',
-      mode: dto.mode,
-      hasPassword: dto.hasPassword,
-      password: dto.hasPassword ? dto.password : undefined,
-      isOwn: true,
-      createdAt: new Date().toISOString(),
-      playerList: [{
-        name: host,
-        clan: user?.clan ?? '',
-        clanTag: user?.clanTag,
-        status: 'Waiting',
-        isOwner: true,
-        avatarColor: user?.avatarColor || authorColor,
-        avatarImage: user?.avatarImage,
-        faction: dto.faction,
-        regionLevel: user?.regionalLevels?.[dto.faction || 'Demacia'] || 1,
-      }],
+    const body = {
+      nombre: dto.name,
+      creador: user.username,
+      maxJugadores: dto.maxPlayers,
+      esPrivada: dto.hasPassword,
+      password: dto.password,
+      estado: 'LOBBY'
     };
 
-    this.lobbies.update(list => [lobby, ...list]);
-    this.save();
-    return lobby;
+    const s = await firstValueFrom(this.http.post<any>(this.API_URL, body));
+
+    // Al crear, el creador debe unirse automáticamente (pasando la pass y región si es privada)
+    return this.joinLobby(s.id, dto.password, dto.faction) as Promise<LobbyEntry>;
   }
 
-  /** Add the current user to an existing lobby (or find the first open one) */
-  joinLobby(id: number): LobbyEntry | null {
+  async joinLobby(id: string | number, password?: string, faction?: string): Promise<LobbyEntry | null> {
     const user = this.auth.currentUser();
-    if (!user) return null; // Block unauthenticated users
-    const username = user.username;
-    const clan     = user.clan ?? '';
+    if (!user) return null;
 
-    const target = this.getLobbyById(id);
-    if (!target || target.status === 'En curso') return null;
+    const participante = {
+      nombre: user.username,
+      faction: faction || user.faction || 'Demacia',
+      status: 'Waiting',
+      avatarColor: user.avatarColor || '#8b5cf6'
+    };
 
-    // Don't double-add
-    const alreadyIn = target.playerList.some(p => p.name === username);
-    if (!alreadyIn && target.players >= target.maxPlayers) return null;
-    if (!alreadyIn) {
-      const updated: LobbyEntry = {
-        ...target,
-        players: target.players + 1,
-        playerList: [
-          ...target.playerList,
-          {
-            name: username,
-            clan,
-            clanTag: user.clanTag,
-            status: 'Waiting',
-            isOwner: false,
-            avatarColor: user.avatarColor || AVATAR_COLORS[target.playerList.length % AVATAR_COLORS.length],
-            avatarImage: user.avatarImage,
-            faction: user.faction || 'Demacia',
-            regionLevel: user.regionalLevels?.[user.faction || 'Demacia'] || 1,
-          }
-        ],
-      };
-      this.lobbies.update(list => list.map(l => l.id === id ? updated : l));
-      this.save();
+    try {
+      const url = password ? `${this.API_URL}/${id}/unirse?password=${password}` : `${this.API_URL}/${id}/unirse`;
+      const s = await firstValueFrom(this.http.post<any>(url, participante));
+      const updated = this.mapToLobbyEntry(s);
+      this.refreshLobbies();
       return updated;
+    } catch (e) {
+      console.error('Error al unirse:', e);
+      return null;
     }
-    return target;
   }
 
-  /** Removes the current user from the lobby (or deletes it if host) */
-  leaveLobby(id: number): void {
+  async leaveLobby(id: string | number) {
     const user = this.auth.currentUser();
-    const username = user?.username;
-    if (!username) return;
+    if (!user) return;
 
-    const target = this.getLobbyById(id);
-    if (!target) return;
-
-    // If the host leaves, the room is deleted
-    if (target.host === username) {
-      this.deleteLobby(id);
-      return;
-    }
-
-    const isMember = target.playerList.some(p => p.name === username);
-    if (isMember) {
-      const updated: LobbyEntry = {
-        ...target,
-        players: Math.max(0, target.players - 1),
-        playerList: target.playerList.filter(p => p.name !== username),
-      };
-      this.lobbies.update(list => list.map(l => l.id === id ? updated : l));
-      this.save();
-    }
+    await firstValueFrom(this.http.post(`${this.API_URL}/${id}/salir?username=${user.username}`, {}));
+    this.refreshLobbies();
   }
 
-  updatePlayerStatus(lobbyId: number, playerName: string, status: 'Ready' | 'Waiting'): void {
-    this.lobbies.update(list =>
-      list.map(l => {
-        if (l.id !== lobbyId) return l;
-        const updatedPlayers = l.playerList.map(p =>
-          p.name === playerName ? { ...p, status } : p
-        );
-
-        // Check if ALL are ready now
-        const allReady = updatedPlayers.length >= 2 && updatedPlayers.every(p => p.status === 'Ready');
-        
-        return {
-          ...l,
-          playerList: updatedPlayers,
-          startReadyTime: allReady ? (l.startReadyTime || Date.now()) : null
-        };
-      })
+  async updatePlayerStatus(lobbyId: string | number, playerName: string, status: 'Ready' | 'Waiting') {
+    const s = await firstValueFrom(
+      this.http.put<any>(`${this.API_URL}/${lobbyId}/estado?username=${playerName}&estado=${status}`, {})
     );
-    this.save();
+    
+    const updated = this.mapToLobbyEntry(s);
+    this.lobbies.update(list => list.map(l => l.id === updated.id ? updated : l));
+    return updated;
   }
 
-  /** Get a pool of NPC chat messages for a lobby's simulation */
-  getNpcChats(): { sender: string; text: string }[] {
-    return [...NPC_CHATS].sort(() => Math.random() - 0.5);
-  }
-
-  /** Reset to demo data (useful for dev) */
-  reset(): void {
-    localStorage.removeItem(STORAGE_KEY);
-    this.lobbies.set(this.seedLobbies());
-  }
-
-  changePlayerFaction(lobbyId: number, playerName: string, newFaction: string, level: number): void {
-    this.lobbies.update(list =>
-      list.map(l => {
-        if (l.id !== lobbyId) return l;
-        return {
-          ...l,
-          playerList: l.playerList.map(p =>
-            p.name === playerName ? { ...p, faction: newFaction, regionLevel: level } : p
-          )
-        };
-      })
+  async changePlayerFaction(lobbyId: string | number, playerName: string, newFaction: string, _level: number) {
+    await firstValueFrom(
+      this.http.put<any>(`${this.API_URL}/${lobbyId}/faccion?username=${encodeURIComponent(playerName)}&faccion=${encodeURIComponent(newFaction)}`, {})
     );
-    this.save();
   }
 }

@@ -20,7 +20,7 @@ import { RouterLink } from '@angular/router';
             <h3>📧 Contacto Directo</h3>
             <p>Envíanos un correo con los detalles de tu problema, capturas de pantalla y tu nombre de usuario.</p>
             <div class="email-container">
-              <a href="mailto:soporte@payload-strike.com" class="support-link">soporte&#64;payload-strike.com</a>
+              <a href="mailto:soporte@runeterra-tactics.com" class="support-link">soporte&#64;runeterra-tactics.com</a>
               <button class="btn-copy" (click)="copyEmail()" [title]="copyLabel()">{{ copyLabel() === 'Copiado!' ? '✅' : '📋' }}</button>
             </div>
           </div>
@@ -157,7 +157,7 @@ export class Support {
   copyLabel = signal('Copiar');
 
   copyEmail() {
-    navigator.clipboard.writeText('soporte@payload-strike.com');
+    navigator.clipboard.writeText('soporte@runeterra-tactics.com');
     this.copyLabel.set('Copiado!');
     setTimeout(() => this.copyLabel.set('Copiar'), 2000);
   }

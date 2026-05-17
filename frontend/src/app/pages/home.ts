@@ -15,14 +15,14 @@ import { AuthService } from '../services/auth.service';
     <!-- ═══════════════ HERO ═══════════════ -->
     <section class="hero-section glass-panel animate-fade-in" style="animation-delay: 0.2s;">
                         <div class="hero-content">
-        <span class="badge">Fase de Selección y Bloqueos</span>
+        <span class="badge">Batalla legendaria</span>
         <h1>Domina la <span class="highlight-gradient">Grieta</span></h1>
-        <p class="subtitle">Elige a tu campeón, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
+        <p class="subtitle">Elige a tu región, asegura tus objetivos y destruye el Nexo enemigo en este enfrentamiento táctico en Runaterra.</p>
 
         <div class="action-panel glass-panel">
           <div class="action-panel-header">
             <h3>¿Listo para la batalla?</h3>
-            <p>Configura tu sala y lidera a tu equipo a la victoria.</p>
+            <p>Configura tu sala y lidera a tu región a la victoria.</p>
           </div>
           <div class="action-buttons">
             <button class="btn btn-primary play-btn" (click)="openModal()">
@@ -41,8 +41,8 @@ import { AuthService } from '../services/auth.service';
         <div class="champion-card glass-panel">
           <div class="card-image-placeholder"></div>
           <div class="card-info">
-            <h3>Fijar o Banear</h3>
-            <span class="rolemage">Anticipa a tus enemigos</span>
+            <h3>Runaterra</h3>
+            <span class="rolemage">Aplasta a tus enemigos</span>
           </div>
         </div>
       </div>
@@ -60,7 +60,12 @@ import { AuthService } from '../services/auth.service';
         </div>
         <div class="lobbies-controls">
           <label class="search-label" for="search-sala">🔍 Buscar sala</label>
-          <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+          <div class="search-row">
+            <input class="search-input" id="search-sala" type="text" placeholder="Nombre o host..." [(ngModel)]="searchQuery">
+            <button class="btn btn-secondary btn-code" (click)="openJoinCodeModal()">
+              INTRODUCIR CÓDIGO
+            </button>
+          </div>
         </div>
       </div>
 
@@ -81,9 +86,9 @@ import { AuthService } from '../services/auth.service';
               </span>
             </div>
             <span class="lobby-status-badge"
-              [class.status-waiting]="lobby.status === 'Esperando'"
-              [class.status-ingame]="lobby.status === 'En curso'">
-              {{ lobby.status }}
+              [class.status-waiting]="lobby.status === 'LOBBY'"
+              [class.status-ingame]="lobby.status === 'IN_GAME'">
+              {{ lobby.status === 'LOBBY' ? 'ESPERANDO' : 'EN JUEGO' }}
             </span>
           </div>
 
@@ -116,13 +121,13 @@ import { AuthService } from '../services/auth.service';
             <button
               *ngIf="!lobby.isOwn"
               class="btn btn-join"
-              [class.btn-disabled]="lobby.status === 'En curso' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
-              [disabled]="lobby.status === 'En curso' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
+              [class.btn-disabled]="lobby.status === 'IN_GAME' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
+              [disabled]="lobby.status === 'IN_GAME' || (lobby.players >= lobby.maxPlayers && !isUserMember(lobby))"
               (click)="isUserMember(lobby) ? enterLobby(lobby.id) : joinLobby(lobby)">
-              <span *ngIf="lobby.status === 'En curso'">EN JUEGO</span>
-              <span *ngIf="lobby.status !== 'En curso' && lobby.players >= lobby.maxPlayers && !isUserMember(lobby)">LLENA</span>
-              <span *ngIf="lobby.status !== 'En curso' && isUserMember(lobby)">ENTRAR</span>
-              <span *ngIf="lobby.status !== 'En curso' && !isUserMember(lobby) && lobby.players < lobby.maxPlayers">UNIRSE</span>
+              <span *ngIf="lobby.status === 'IN_GAME'">EN JUEGO</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && lobby.players >= lobby.maxPlayers && !isUserMember(lobby)">LLENA</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && isUserMember(lobby)">ENTRAR</span>
+              <span *ngIf="lobby.status !== 'IN_GAME' && !isUserMember(lobby) && lobby.players < lobby.maxPlayers">UNIRSE</span>
             </button>
           </div>
         </div>
@@ -279,6 +284,33 @@ import { AuthService } from '../services/auth.service';
     </div>
   </div>
 
+  <!-- ═══════════════ MODAL: UNIRSE POR CÓDIGO ═══════════════ -->
+  <div class="modal-overlay" *ngIf="showJoinCodeModal()" (click)="closeOnBackdrop($event, 'code')">
+    <div class="modal-panel glass-panel animate-modal" id="join-code-modal" style="max-width:400px">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🎫</span>
+          <div>
+            <h2 class="modal-title">Unirse por código</h2>
+            <p class="modal-subtitle">Introduce el ID de la sala</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="showJoinCodeModal.set(false); unlockBody()">✕</button>
+      </div>
+      <div class="modal-form">
+        <div class="mform-group">
+          <label for="join-code">ID de Sala / Código</label>
+          <input id="join-code" type="text" class="mform-control" [(ngModel)]="joinCodeInput" placeholder="Ej: 4030" autocomplete="off">
+        </div>
+        <div class="alert-error-inline" *ngIf="joinCodeError()">{{ joinCodeError() }}</div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="showJoinCodeModal.set(false); unlockBody()">Cancelar</button>
+          <button class="btn btn-primary modal-submit-btn" (click)="confirmJoinByCode()">ENTRAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════ MODAL: CREAR PARTIDA ═══════════════ -->
   <div class="modal-overlay" *ngIf="showModal()" (click)="closeOnBackdrop($event, 'create')">
     <div class="modal-panel glass-panel animate-modal" id="create-lobby-modal">
@@ -350,7 +382,7 @@ import { AuthService } from '../services/auth.service';
           <label for="room-pass">Código de Acceso <span class="req">*</span></label>
           <input id="room-pass" type="text" class="mform-control"
             placeholder="Ej: 1234 (mín. 4 caracteres)" name="roomPassword"
-            [(ngModel)]="draft.password" [required]="draft.hasPassword" minlength="4"
+            [(ngModel)]="draft.password" minlength="4"
             autocomplete="off" style="-webkit-text-security: disc;">
         </div>
 
@@ -374,7 +406,7 @@ import { AuthService } from '../services/auth.service';
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary modal-submit-btn"
-            [disabled]="createForm.invalid || (draft.hasPassword && !draft.password)">
+            [disabled]="!draft.name || draft.name.length < 3 || (draft.hasPassword && (!draft.password || draft.password.length < 4))">
             ⚔ CREAR SALA
           </button>
         </div>
@@ -397,6 +429,8 @@ import { AuthService } from '../services/auth.service';
     .lobbies-controls { display: flex; flex-direction: column; gap: 6px; }
     .search-label { font-family: var(--font-heading); font-size: 0.78rem; color: var(--accent-secondary); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
     .search-input { background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); color: white; padding: 10px 16px; border-radius: 8px; outline: none; font-family: var(--font-body); font-size: 0.9rem; width: 220px; transition: all var(--transition-fast); }
+    .search-row { display: flex; gap: 8px; align-items: center; }
+    .btn-code { padding: 10px 16px; font-size: 0.8rem; white-space: nowrap; height: 40px; }
     .search-input:focus { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(6,182,212,0.2); }
     .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 
@@ -442,13 +476,13 @@ import { AuthService } from '../services/auth.service';
     .mform-group label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--accent-secondary); letter-spacing: 0.05em; }
     .req { color: var(--accent-danger); }
     .moptional { color: var(--text-muted); font-size: 0.78em; font-weight: 400; }
-    .mform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .mform-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
     .mform-control { background: rgba(0,0,0,0.4); border: 1px solid var(--border-light); padding: 11px 14px; border-radius: 8px; color: white; font-family: var(--font-body); font-size: 0.93rem; outline: none; transition: all var(--transition-fast); width: 100%; }
     .mform-control:focus { border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(139,92,246,0.3); }
     .minvalid { border-color: var(--accent-danger) !important; }
     .mfield-error { font-size: 0.78rem; color: var(--accent-danger); }
     .mcheckbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; color: var(--text-muted); user-select: none; font-family: var(--font-body); }
-    .mcheckbox-label input[type=checkbox] { display: none; }
+    .mcheckbox-label input[type=checkbox] { position: absolute; opacity: 0; pointer-events: none; }
     .mcheckbox-custom { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; border: 2px solid var(--border-light); background: rgba(0,0,0,0.3); transition: all var(--transition-fast); position:relative; }
     .mcheckbox-label input:checked ~ .mcheckbox-custom { background: var(--accent-primary); border-color: var(--accent-primary); }
     .mcheckbox-label input:checked ~ .mcheckbox-custom::after { content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-size:0.75rem; font-weight:900; }
@@ -485,7 +519,7 @@ export class Home {
   readonly auth = inject(AuthService);
   private router = inject(Router);
 
-  regions = ["Demacia", "Noxus", "Ionia", "Freljord", "Piltover", "Zaun", "Shurima", "Shadow Isles", "Targon", "Bilgewater", "Ixtal", "The Void"];
+  regions = ["Demacia", "Noxus", "Ionia", "Freljord", "Piltover", "Zaun", "Shurima", "Shadow Isles", "Targon", "Bilgewater", "Ixtal", "Void", "Tierras Perdidas"];
 
 
   searchQuery = '';
@@ -493,15 +527,18 @@ export class Home {
   showModal = signal(false);
   showPasswordModal = signal(false);
   showExistingLobbyModal = signal(false);
+  showJoinCodeModal = signal(false);
   showNoSessionAlert = signal(false);
   showCopiedToast = signal(false);
   existingLobby = signal<import('../services/lobby.service').LobbyEntry | null>(null);
   passwordInput = '';
+  joinCodeInput = '';
   passwordError = signal('');
+  joinCodeError = signal('');
   profanityError = signal('');
 
   /** Lobby the user is trying to join (needs password check) */
-  private pendingLobbyId: number | null = null;
+  private pendingLobbyId: string | null = null;
 
   draft = this.emptyDraft();
 
@@ -511,11 +548,18 @@ export class Home {
 
   filteredLobbies() {
     const q = this.searchQuery.trim().toLowerCase();
-    const all = this.lobbyService.lobbies();
+    const username = this.auth.currentUser()?.username;
+    const all = this.lobbyService.lobbies().map(l => ({
+      ...l,
+      isOwn: l.host === username
+    }));
+
     if (!q) return all;
-    return all.filter(l =>
-      l.name.toLowerCase().includes(q) || l.host.toLowerCase().includes(q)
-    );
+    return all.filter((l: any) => {
+      const nameMatch = l.name?.toLowerCase().includes(q);
+      const hostMatch = l.host?.toLowerCase().includes(q);
+      return nameMatch || hostMatch;
+    });
   }
 
   // ── Modal: Crear ────────────────────────────────────────────────
@@ -559,10 +603,10 @@ export class Home {
   }
 
   /** Delete the existing lobby then open the create modal */
-  deleteAndCreate() {
+  async deleteAndCreate() {
     const lobby = this.existingLobby();
     if (!lobby) return;
-    this.lobbyService.deleteLobby(lobby.id);
+    await this.lobbyService.deleteLobby(lobby.id);
     this.showExistingLobbyModal.set(false);
     this.existingLobby.set(null);
     this.draft = this.emptyDraft();
@@ -579,19 +623,51 @@ export class Home {
     document.body.style.overflow = '';
   }
 
-  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing' | 'login') {
+  closeOnBackdrop(e: MouseEvent, which: 'create' | 'pass' | 'existing' | 'login' | 'code') {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) {
       if (which === 'create') this.closeModal();
       else if (which === 'pass') { this.showPasswordModal.set(false); this.unlockBody(); }
+      else if (which === 'existing') { this.showExistingLobbyModal.set(false); this.unlockBody(); }
       else if (which === 'login') { this.showLoginRequired.set(false); this.unlockBody(); }
-      else { this.showExistingLobbyModal.set(false); this.unlockBody(); }
+      else if (which === 'code') { this.showJoinCodeModal.set(false); this.unlockBody(); }
     }
   }
 
-  confirmCreate() {
+
+  openJoinCodeModal() {
+    if (!this.auth.isLoggedIn()) {
+      this.showNoSessionAlert.set(true);
+      return;
+    }
+    this.joinCodeInput = '';
+    this.joinCodeError.set('');
+    this.showJoinCodeModal.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  async confirmJoinByCode() {
+    const code = this.joinCodeInput.trim();
+    if (!code) {
+      this.joinCodeError.set('Introduce un código de sala válido.');
+      return;
+    }
+
+    const lobby = await this.lobbyService.getLobbyById(code);
+    if (!lobby) {
+      this.joinCodeError.set('No se ha encontrado ninguna sala con ese código.');
+      return;
+    }
+
+    this.showJoinCodeModal.set(false);
+    this.unlockBody();
+    this.joinLobby(lobby);
+  }
+
+  async confirmCreate() {
     let lobby: import('../services/lobby.service').LobbyEntry;
     try {
-      lobby = this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+      const result = await this.lobbyService.createLobby({ ...this.draft, maxPlayers: Number(this.draft.maxPlayers) });
+      lobby = result;
     } catch (err: any) {
       if (err.message.includes('palabras no permitidas')) {
         this.profanityError.set(err.message);
@@ -607,7 +683,7 @@ export class Home {
   }
 
   // ── Join logic ──────────────────────────────────────────────────
-  joinLobby(lobby: { id: number; hasPassword: boolean; password?: string }) {
+  joinLobby(lobby: { id: string; hasPassword: boolean; password?: string }) {
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';
@@ -626,31 +702,30 @@ export class Home {
 
   confirmJoinWithPassword() {
     if (!this.pendingLobbyId) return;
-    const lobby = this.lobbyService.getLobbyById(this.pendingLobbyId);
-    if (lobby?.password !== this.passwordInput) {
-      this.passwordError.set('Código incorrecto. Inténtalo de nuevo.');
-      return;
-    }
     this.showPasswordModal.set(false);
     document.body.style.overflow = '';
-    this.doJoin(this.pendingLobbyId);
+    this.doJoin(this.pendingLobbyId, this.passwordInput);
     this.pendingLobbyId = null;
   }
 
-  private doJoin(id: number) {
-    const joined = this.lobbyService.joinLobby(id);
-    if (!joined) return;
-    this.router.navigate(['/lobby', id]);
+  private async doJoin(id: string | number, password?: string) {
+    const joined = await this.lobbyService.joinLobby(id, password);
+    if (!joined) {
+      // Si falló, probablemente fue la contraseña (si es privada)
+      this.passwordError.set('Código incorrecto o error al unirse.');
+      return;
+    }
+    this.router.navigate(['/lobby', id.toString()]);
   }
 
-  shareLobbyLink(id: number) {
+  shareLobbyLink(id: string | number) {
     const url = `${window.location.origin}/lobby/${id}`;
     navigator.clipboard.writeText(url).catch(() => {
       window.prompt('Copia este enlace:', url);
     });
   }
 
-  enterLobby(id: number) {
+  enterLobby(id: string | number) {
     if (!this.auth.currentUser()) {
       this.showLoginRequired.set(true);
       document.body.style.overflow = 'hidden';
@@ -663,10 +738,27 @@ export class Home {
   shareLobby(lobby: any, event: Event) {
     event.stopPropagation();
     const url = `${window.location.origin}/lobby/${lobby.id}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const show = () => {
       this.showCopiedToast.set(true);
       setTimeout(() => this.showCopiedToast.set(false), 2500);
-    });
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(show).catch(() => this.copyFallback(url, show));
+    } else {
+      this.copyFallback(url, show);
+    }
+  }
+
+  private copyFallback(text: string, onSuccess: () => void) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); onSuccess(); } catch { }
+    document.body.removeChild(ta);
   }
 
   /** Checks if the current user is already in the player list of a lobby */

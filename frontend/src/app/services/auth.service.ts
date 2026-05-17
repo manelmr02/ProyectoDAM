@@ -16,6 +16,7 @@ export interface UserStats {
 }
 
 export interface UserProfile {
+  id: string;
   username: string;
   email: string;
   clan: string;
@@ -86,7 +87,7 @@ export class AuthService {
   private router = inject(Router);
   private profanity = inject(ProfanityService);
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = 'http://51.107.3.232/api/auth';
 
   // ── Reactive state ──────────────────────────────────────────────
   readonly currentUser = signal<UserProfile | null>(this.loadSession());
@@ -153,8 +154,10 @@ export class AuthService {
       const defaults = generateDefaultProfile();
       const profile: UserProfile = {
         ...defaults,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
+        createdAt: response.user.createdAt || new Date().toISOString(),
         clan: response.user.clan || defaults.faction!,
         avatarColor: response.user.avatarColor || defaults.avatarColor!,
         bio: response.user.bio || defaults.bio!,
@@ -181,13 +184,20 @@ export class AuthService {
       localStorage.setItem('token', response.token);
       
       const defaults = generateDefaultProfile();
+      const localUsers = this.getUsers();
+      const localMatch = localUsers.find(u => u.username === response.user.username);
+
       const profile: UserProfile = {
         ...defaults,
+        ...localMatch,
+        id: response.user.id,
         username: response.user.username,
         email: response.user.email,
-        clan: response.user.clan || defaults.faction!,
-        avatarColor: response.user.avatarColor || defaults.avatarColor!,
-        bio: response.user.bio || defaults.bio!,
+        createdAt: response.user.createdAt || localMatch?.createdAt || new Date().toISOString(),
+        clan: response.user.clan || localMatch?.clan || defaults.faction!,
+        avatarColor: response.user.avatarColor || localMatch?.avatarColor || defaults.avatarColor!,
+        avatarImage: response.user.avatarImage || localMatch?.avatarImage,
+        bio: response.user.bio || localMatch?.bio || defaults.bio!,
         level: response.user.level || 1,
         stats: response.user.stats || defaults.stats!
       } as UserProfile;

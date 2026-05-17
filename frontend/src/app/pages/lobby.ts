@@ -5,22 +5,11 @@ import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { LobbyService, LobbyEntry } from '../services/lobby.service';
 import { AuthService } from '../services/auth.service';
 import { ProfanityService } from '../services/profanity.service';
+import { WebSocketService } from '../services/websocket.service';
+import type { StompSubscription } from '@stomp/stompjs';
 
 interface ChatMessage { sender?: string; text: string; time: string; system?: boolean; }
 
-// NPC phrases for random chat simulation
-const PHRASES: { sender: string; text: string }[] = [
-  { sender: 'YasuoMain', text: 'La muerte es como el viento...' },
-  { sender: 'GarenGamer', text: '¡Por Demacia!' },
-  { sender: 'JinxEnjoyer', text: '¡Reglas hechas para romperse!' },
-  { sender: 'TeemoGod', text: 'Tamaño no lo es todo.' },
-  { sender: 'ZedPlayer', text: 'Las sombras me iluminan.' },
-  { sender: 'DarkPhoenix', text: 'Primera vez, pero no seré el último.' },
-  { sender: 'AhriFan', text: '¿No confías en mí?' },
-  { sender: 'ShadowMind', text: '...' },
-  { sender: 'NovaCaptain', text: '¿Invadimos o esperamos?' },
-  { sender: 'FrostWarden', text: 'Silencio antes de la tormenta.' },
-];
 
 @Component({
   selector: 'app-lobby',
@@ -376,6 +365,7 @@ export class Lobby implements OnInit, OnDestroy {
   private lobbyService = inject(LobbyService);
   readonly auth = inject(AuthService);
   private profanity = inject(ProfanityService);
+  private ws = inject(WebSocketService);
 
   lobby = signal<LobbyEntry | null>(null);
   messages = signal<ChatMessage[]>([]);
@@ -385,10 +375,12 @@ export class Lobby implements OnInit, OnDestroy {
   notAuthenticated = signal(false);
   chatInput = '';
 
-  regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'The Void'];
-
+  regions = ['Demacia', 'Noxus', 'Ionia', 'Freljord', 'Piltover', 'Zaun', 'Shurima', 'Shadow Isles', 'Targon', 'Bilgewater', 'Ixtal', 'Void', 'Tierras Perdidas'];
 
   private timers: ReturnType<typeof setTimeout>[] = [];
+  private wsSubscriptions: StompSubscription[] = [];
+  private leaving = false;
+  private gameStarted = false;
 
   myName = computed(() => this.auth.currentUser()?.username ?? '');
 
@@ -436,40 +428,78 @@ export class Lobby implements OnInit, OnDestroy {
       return;
     }
 
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    const found = this.lobbyService.getLobbyById(id);
+    const id = this.route.snapshot.paramMap.get('id') || '';
 
-    if (!found) {
-      this.lobby.set(null);
-      return;
-    }
+    // Usamos la nueva versión asíncrona para asegurar que encuentra la sala recién creada
+    this.lobbyService.getLobbyById(id).then(found => {
+      if (!found) {
+        this.lobby.set(null);
+        return;
+      }
 
-    // Auto-join if not in list (e.g. on refresh or direct nav)
-    const isMember = found.playerList.some(p => p.name === this.myName());
-    if (!isMember && found.players < found.maxPlayers && found.status === 'Esperando') {
-      const updated = this.lobbyService.joinLobby(found.id);
-      if (updated) {
-        this.lobby.set(updated);
+      // Auto-join if not in list
+      const isMember = found.playerList.some(p => p.name === this.myName());
+      if (!isMember && found.players < found.maxPlayers && found.status === 'LOBBY') {
+        this.lobbyService.joinLobby(found.id).then((updated: any) => {
+          this.lobby.set(updated || found);
+          this.initMessages();
+        });
       } else {
         this.lobby.set(found);
+        this.initMessages();
       }
-    } else {
-      this.lobby.set(found);
-    }
 
-    // Sync isReady state if already in lobby
-    const me = this.lobby()?.playerList.find(p => p.name === this.myName());
-    if (me) {
-      this.isReady.set(me.status === 'Ready');
-    }
+      // Sync isReady state
+      const me = found.playerList.find(p => p.name === this.myName());
+      if (me) this.isReady.set(me.status === 'Ready');
 
-    const currentLobby = this.lobby()!;
+      // WebSocket: subscribe to sala updates and chat
+      this.ws.connect().then(() => {
+        const salaSub = this.ws.subscribeToSala(id, (data: any) => {
+          if (data.deleted) {
+            this.addSystem('La sala ha sido eliminada.');
+            setTimeout(() => this.router.navigate(['/']), 2000);
+            return;
+          }
+          const mapped = this.lobbyService.mapToLobbyEntry(data);
+          this.lobby.set(mapped);
+          const meWs = mapped.playerList.find((p: any) => p.name === this.myName());
+          if (meWs) this.isReady.set(meWs.status === 'Ready');
+        });
+
+        const chatSub = this.ws.subscribeToChat(id, (msg: any) => {
+          if (msg.sender !== this.myName()) {
+            this.addMsg(msg.sender, msg.text);
+          }
+        });
+
+        this.wsSubscriptions = [salaSub, chatSub];
+      }).catch(() => {
+        // Fallback to polling if WebSocket unavailable
+        const fallbackId = setInterval(async () => {
+          const current = this.lobby();
+          if (!current) return;
+          const refreshed = await this.lobbyService.getLobbyById(current.id);
+          if (refreshed) {
+            this.lobby.set(refreshed);
+            const meR = refreshed.playerList.find(p => p.name === this.myName());
+            if (meR) this.isReady.set(meR.status === 'Ready');
+          }
+        }, 3000);
+        this.wsSubscriptions = [{ id: '', unsubscribe: () => clearInterval(fallbackId) }] as any;
+      });
+    });
+  }
+
+  private initMessages() {
+    const currentLobby = this.lobby();
+    if (!currentLobby) return;
 
     // Initial system message
     this.addSystem(`Sala "${currentLobby.name}" cargada. ${currentLobby.players}/${currentLobby.maxPlayers} jugadores.`);
 
     // Announce existing players
-    currentLobby.playerList.forEach((p, i) => {
+    currentLobby.playerList.forEach((p: any, i: number) => {
       if (p.name !== this.myName()) {
         const t = setTimeout(() => {
           this.addSystem(`${p.name} está en la sala.`);
@@ -477,67 +507,47 @@ export class Lobby implements OnInit, OnDestroy {
         this.timers.push(t);
       }
     });
-
-    // Schedule NPC chat messages
-    const chats = this.lobbyService.getNpcChats().filter(c =>
-      found.playerList.some(p => p.name === c.sender)
-    );
-
-    chats.slice(0, 4).forEach((c, i) => {
-      const delay = 3000 + i * 3500 + Math.random() * 2000;
-      const t = setTimeout(() => {
-        this.addMsg(c.sender, c.text);
-        // Sometimes a player marks as ready after chatting
-        if (Math.random() > 0.6) {
-          const t2 = setTimeout(() => {
-            this.lobbyService.updatePlayerStatus(found.id, c.sender, 'Ready');
-            this.lobby.set(this.lobbyService.getLobbyById(found.id) ?? null);
-            this.addSystem(`${c.sender} está LISTO.`);
-          }, 1500);
-          this.timers.push(t2);
-        }
-      }, delay);
-      this.timers.push(t);
-    });
   }
 
   ngOnDestroy() {
     this.timers.forEach(t => clearTimeout(t));
+    this.wsSubscriptions.forEach(s => s.unsubscribe());
     this.stopCountdown();
 
-    // If the user navigates away while ready, cancel their ready state
-    // so the countdown stops for everyone.
-    if (this.isReady()) {
+    // Only reset ready-status if the user is still in the lobby (not leaving or starting a game)
+    if (!this.leaving && !this.gameStarted && this.isReady()) {
       this.toggleReady();
     }
   }
 
-  toggleReady() {
+  async toggleReady() {
     const l = this.lobby();
     if (!l) return;
     this.isReady.update(v => !v);
     const newStatus = this.isReady() ? 'Ready' : 'Waiting';
-    this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
-    this.lobby.set(this.lobbyService.getLobbyById(l.id) ?? null);
+    await this.lobbyService.updatePlayerStatus(l.id, this.myName(), newStatus);
+    // Lobby se actualiza via WebSocket broadcast del servidor
     this.addSystem(this.isReady()
       ? `${this.myName()} está LISTO.`
       : `${this.myName()} canceló el estado listo.`
     );
   }
 
-  leaveLobby() {
+  async leaveLobby() {
     const l = this.lobby();
-    if (l) {
-      this.lobbyService.leaveLobby(l.id);
-      this.router.navigate(['/']);
-    }
+    if (!l) return;
+    this.leaving = true;
+    try {
+      await this.lobbyService.leaveLobby(l.id);
+    } catch { /* navigate regardless */ }
+    this.router.navigate(['/']);
   }
 
-  confirmDelete() {
+  async confirmDelete() {
     const l = this.lobby();
     if (!l) return;
 
-    this.lobbyService.deleteLobby(l.id);
+    await this.lobbyService.deleteLobby(l.id);
     this.showDeleteModal.set(false);
     this.router.navigate(['/']);
   }
@@ -554,6 +564,10 @@ export class Lobby implements OnInit, OnDestroy {
     if (!text) return;
 
     const filtered = this.profanity.filterText(text);
+    const l = this.lobby();
+    if (l) {
+      this.ws.sendChat(l.id, { sender: this.myName(), text: filtered, time: this.now() });
+    }
     this.addMsg(this.myName(), filtered);
     this.chatInput = '';
     this.scrollChat();
@@ -563,13 +577,27 @@ export class Lobby implements OnInit, OnDestroy {
     const l = this.lobby();
     if (!l) return;
     const url = `${window.location.origin}/lobby/${l.id}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const showToast = () => {
       this.showShareToast.set(true);
       setTimeout(() => this.showShareToast.set(false), 2500);
-    }).catch(() => {
-      // Fallback: prompt
-      window.prompt('Copia este enlace:', url);
-    });
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(showToast).catch(() => this.copyFallback(url, showToast));
+    } else {
+      this.copyFallback(url, showToast);
+    }
+  }
+
+  private copyFallback(text: string, onSuccess: () => void) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(el);
+    if (ok) { onSuccess(); } else { window.prompt('Copia este enlace:', text); }
   }
 
   private addSystem(text: string) {
@@ -611,7 +639,9 @@ export class Lobby implements OnInit, OnDestroy {
 
       if (remaining <= 0) {
         this.stopCountdown();
-        this.addSystem('¡BIENVENIDOS A LA GRIETA DEL INVOCADOR!');
+        this.gameStarted = true;
+        const lobbyId = this.lobby()?.id;
+        this.router.navigate(['/battle', lobbyId]);
       }
     }, 500); // Check more frequently for better sync
   }
@@ -624,15 +654,16 @@ export class Lobby implements OnInit, OnDestroy {
     this.countdown.set(5);
   }
 
-  changeFaction(newFaction: string) {
+  async changeFaction(newFaction: string) {
     const l = this.lobby();
     if (!l) return;
     const user = this.auth.currentUser();
     if (!user) return;
-    
+
     const level = user.regionalLevels?.[newFaction] || 1;
     this.lobbyService.changePlayerFaction(l.id, this.myName(), newFaction, level);
-    this.lobby.set(this.lobbyService.getLobbyById(l.id) ?? null);
+    const updated = await this.lobbyService.getLobbyById(l.id);
+    this.lobby.set(updated ?? null);
     this.addSystem(`${this.myName()} ha cambiado su región a ${newFaction}.`);
   }
 }
