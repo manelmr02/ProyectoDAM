@@ -1,6 +1,8 @@
 # ProyectoDAM
 Repositorio dedicado al proyecto de fin de grado de 2ºDAM
 
+IP de la máquina en Azure en la que está desplegado mediante Docker: http://51.107.3.232/
+
 ## PASOS PARA LA EJECUCIÓN DEL PROYECTO (por el momento)
 1. Abrir el CMD (más comodo).
 2. Desplazarse a la carpeta client.
@@ -10,8 +12,9 @@ Repositorio dedicado al proyecto de fin de grado de 2ºDAM
 - [x] Default
 - [x] Usability improvement
 - [x] BBDD SQL
-- [x] BBDD NoSQL
+- [x] BBDD NoSQL -> MongoDB
 - [x] Sockets Connection
+- [x] UI/UX 
 
 
 # Guía de Configuración del Entorno de Desarrollo (Backend)
