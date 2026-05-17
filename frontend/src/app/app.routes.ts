@@ -12,6 +12,8 @@ import { Privacy } from './pages/privacy';
 import { Rules } from './pages/rules';
 import { Support } from './pages/support';
 import { Factions } from './pages/factions';
+import { Ranks } from './pages/ranks';
+import { Items } from './pages/items';
 
 export const routes: Routes = [
   { path: '',                  component: Home },
@@ -24,6 +26,8 @@ export const routes: Routes = [
   { path: 'profile',           component: Profile },
   { path: 'player/:username',  component: PlayerProfile },
   { path: 'regiones',          component: Factions },
+  { path: 'rangos',            component: Ranks },
+  { path: 'items',             component: Items },
   { path: 'terms',             component: Terms },
   { path: 'privacy',           component: Privacy },
   { path: 'rules',             component: Rules },

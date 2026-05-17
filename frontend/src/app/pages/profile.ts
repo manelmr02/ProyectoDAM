@@ -66,12 +66,19 @@ const MASTERY_LABELS: Record<number, string> = {
         <div class="banner-bg"></div>
         <div class="banner-content">
           <div class="avatar-container">
-            <div class="avatar-large" [style.background]="user()!.avatarImage ? 'url(' + user()!.avatarImage + ') center/cover' : avatarGradient()">
-              @if (!user()!.avatarImage) {
+            <div class="avatar-large"
+              [style.background]="(pendingAvatarPreview() || user()!.avatarImage) ? 'url(' + (pendingAvatarPreview() || user()!.avatarImage) + ') center/cover no-repeat' : avatarGradient()">
+              @if (!pendingAvatarPreview() && !user()!.avatarImage) {
                 <span class="avatar-initial">{{ user()!.username[0].toUpperCase() }}</span>
               }
-              <div class="avatar-level" title="Nivel de usuario">LV.{{ user()!.level }}</div>
+              <div class="avatar-level" title="Nivel de usuario">LV.{{ displayLevel() }}</div>
             </div>
+            @if (pendingAvatarPreview() && !editing()) {
+              <div class="preview-actions">
+                <button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:0.82rem;" (click)="confirmPreview()">✔ Guardar foto</button>
+                <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:0.82rem;" (click)="pendingAvatarPreview.set('')">✕ Cancelar</button>
+              </div>
+            }
             <div class="avatar-overlay" (click)="fileInput.click()">
               <div class="overlay-content">
                 <span class="pencil-icon">✏️</span>
@@ -159,7 +166,7 @@ const MASTERY_LABELS: Record<number, string> = {
                   <input id="edit-clan" type="text" class="form-control"
                     placeholder="Nombre del clan" [(ngModel)]="draft.clan" name="clan" maxlength="30">
 
-                  <label for="edit-clan-tag" style="margin-top: 8px;">Tag (sólo si creas uno nuevo)</label>
+                  <label for="edit-clan-tag" style="margin-top: 8px;">Tag del clan</label>
                   <input id="edit-clan-tag" type="text" class="form-control"
                     placeholder="Ej: DAM, STK" [(ngModel)]="draft.clanTag" name="clanTag" maxlength="4" style="text-transform: uppercase;">
                 </div>
@@ -373,7 +380,8 @@ const MASTERY_LABELS: Record<number, string> = {
     .banner-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 28px; padding: 36px 40px; }
 
     /* ── Avatar ── */
-    .avatar-container { position: relative; width: 110px; height: 110px; flex-shrink: 0; cursor: pointer; }
+    .avatar-container { position: relative; width: 110px; flex-shrink: 0; cursor: pointer; }
+    .preview-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
     .avatar-large {
       width: 100%; height: 100%; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; position: relative;
@@ -565,9 +573,17 @@ export class Profile implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  editing = signal(false);
-  saveMsg = signal('');
-  playerStats = signal<PlayerStatsDto | null>(null);
+  editing              = signal(false);
+  saveMsg              = signal('');
+  playerStats          = signal<PlayerStatsDto | null>(null);
+  pendingAvatarPreview = signal<string>('');
+
+  displayLevel = computed(() => {
+    const s = this.playerStats();
+    if (!s) return this.user()?.level ?? 1;
+    const xp = s.gamesPlayed * 10 + s.wins * 20;
+    return Math.floor(Math.sqrt(xp / 15)) + 1;
+  });
 
   user = computed(() => this.auth.currentUser());
 
@@ -683,6 +699,7 @@ export class Profile implements OnInit {
   toggleEdit() {
     this.editing.update(v => !v);
     this.saveMsg.set('');
+    this.pendingAvatarPreview.set('');
     if (this.editing()) {
       const u = this.user()!;
       this.draft = {
@@ -703,16 +720,23 @@ export class Profile implements OnInit {
       const reader = new FileReader();
       reader.onload = (e: any) => {
         const base64 = e.target.result as string;
-        this.draft.avatarImage = base64;
-        if (!this.editing()) {
-          this.auth.updateProfile({ avatarImage: base64 });
-          this.syncToBackend({ avatarImage: base64 });
-          this.saveMsg.set('Foto de perfil actualizada.');
-          setTimeout(() => this.saveMsg.set(''), 2000);
+        this.pendingAvatarPreview.set(base64);
+        if (this.editing()) {
+          this.draft.avatarImage = base64;
         }
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  confirmPreview() {
+    const base64 = this.pendingAvatarPreview();
+    if (!base64) return;
+    this.auth.updateProfile({ avatarImage: base64 });
+    this.syncToBackend({ avatarImage: base64 });
+    this.pendingAvatarPreview.set('');
+    this.saveMsg.set('Foto de perfil actualizada.');
+    setTimeout(() => this.saveMsg.set(''), 2000);
   }
 
   private syncToBackend(updates: Record<string, any>) {

@@ -31,7 +31,9 @@
       }
 
       <a routerLink="/regiones" routerLinkActive="active" class="nav-item">Regiones</a>
-      <a routerLink="/ranking" routerLinkActive="active" class="nav-item">Clasificación</a>
+      <a routerLink="/rangos"   routerLinkActive="active" class="nav-item">Rangos</a>
+      <a routerLink="/items"    routerLinkActive="active" class="nav-item">Ítems</a>
+      <a routerLink="/ranking"  routerLinkActive="active" class="nav-item">Clasificación</a>
     </div>
 
     @if (!auth.isLoggedIn()) {
@@ -93,6 +95,10 @@
 
           <a routerLink="/regiones" routerLinkActive="active" class="mobile-nav-item"
             (click)="closeMobileMenu()">Regiones</a>
+          <a routerLink="/rangos" routerLinkActive="active" class="mobile-nav-item"
+            (click)="closeMobileMenu()">Rangos</a>
+          <a routerLink="/items" routerLinkActive="active" class="mobile-nav-item"
+            (click)="closeMobileMenu()">Ítems</a>
           <a routerLink="/ranking" routerLinkActive="active" class="mobile-nav-item"
             (click)="closeMobileMenu()">Clasificación</a>
 
