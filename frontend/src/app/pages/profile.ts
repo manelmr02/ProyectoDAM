@@ -383,14 +383,15 @@ const MASTERY_LABELS: Record<number, string> = {
     .avatar-container { position: relative; width: 110px; flex-shrink: 0; cursor: pointer; }
     .preview-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
     .avatar-large {
-      width: 100%; height: 100%; border-radius: 50%;
+      width: 110px; height: 110px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; position: relative;
       box-shadow: 0 0 30px rgba(139,92,246,0.3), inset 0 0 20px rgba(0,0,0,0.2);
       border: 3px solid rgba(255,255,255,0.15); transition: all 0.3s ease; z-index: 1;
     }
     .avatar-container:hover .avatar-large { filter: brightness(0.6) blur(2px); transform: scale(1.02); }
     .avatar-overlay {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      position: absolute; top: 0; left: 0; width: 110px; height: 110px;
+      display: flex; align-items: center; justify-content: center;
       z-index: 2; opacity: 0; transition: all 0.3s ease; border-radius: 50%;
     }
     .avatar-container:hover .avatar-overlay { opacity: 1; }
@@ -689,10 +690,22 @@ export class Profile implements OnInit {
     };
 
     try {
-      const stats = await firstValueFrom(
-        this.http.get<PlayerStatsDto>(`${STATS_API}/${encodeURIComponent(u.username)}`)
-      );
-      this.playerStats.set(stats);
+      const [stats, userInfo] = await Promise.all([
+        firstValueFrom(this.http.get<PlayerStatsDto>(`${STATS_API}/${encodeURIComponent(u.username)}`)).catch(() => null),
+        firstValueFrom(this.http.get<any>(`${USERS_API}/by-username/${encodeURIComponent(u.username)}`)).catch(() => null),
+      ]);
+
+      if (stats) {
+        this.playerStats.set(stats);
+        const xp = stats.gamesPlayed * 10 + stats.wins * 20;
+        const computedLevel = Math.floor(Math.sqrt(xp / 15)) + 1;
+        const updates: Partial<any> = {};
+        if (computedLevel !== u.level) updates['level'] = computedLevel;
+        if (userInfo?.createdAt && userInfo.createdAt !== u.createdAt) updates['createdAt'] = userInfo.createdAt;
+        if (Object.keys(updates).length) this.auth.updateProfile(updates);
+      } else if (userInfo?.createdAt && userInfo.createdAt !== u.createdAt) {
+        this.auth.updateProfile({ createdAt: userInfo.createdAt });
+      }
     } catch { /* no stats yet */ }
   }
 

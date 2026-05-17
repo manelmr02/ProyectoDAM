@@ -44,7 +44,7 @@ import { RouterLink } from '@angular/router';
 
           <section class="fair-play">
             <h2>Juego Limpio (Fair Play)</h2>
-            <p>League of Legends Tactics es una competición de habilidad. El uso de scripts o software externo para obtener ventaja resultará en la suspensión inmediata de la cuenta y la pérdida de todos los rangos obtenidos.</p>
+            <p>Runeterra Tactics es una competición de habilidad. El uso de scripts o software externo para obtener ventaja resultará en la suspensión inmediata de la cuenta y la pérdida de todos los rangos obtenidos.</p>
           </section>
         </div>
 

@@ -26,11 +26,14 @@ public class UsuarioController {
     @GetMapping("/by-username/{nickname}")
     public ResponseEntity<?> getByNickname(@PathVariable String nickname) {
         return usuarioRepository.findByNickname(nickname)
-            .map(u -> ResponseEntity.ok(Map.of(
-                "nickname",    u.getNickname(),
-                "avatarImage", u.getAvatarImage() != null ? u.getAvatarImage() : "",
-                "avatarColor", u.getAvatarColor() != null ? u.getAvatarColor() : "#8b5cf6"
-            )))
+            .map(u -> {
+                java.util.Map<String, Object> data = new java.util.HashMap<>();
+                data.put("nickname",    u.getNickname());
+                data.put("avatarImage", u.getAvatarImage() != null ? u.getAvatarImage() : "");
+                data.put("avatarColor", u.getAvatarColor() != null ? u.getAvatarColor() : "#8b5cf6");
+                data.put("createdAt",   u.getCreatedAt() != null ? u.getCreatedAt().toString() : "");
+                return ResponseEntity.ok(data);
+            })
             .orElse(ResponseEntity.notFound().build());
     }
 

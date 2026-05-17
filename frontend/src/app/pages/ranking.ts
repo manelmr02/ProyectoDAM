@@ -79,8 +79,8 @@ const API = 'http://51.107.3.232/api/stats';
           </div>
           <div class="hstat-sep"></div>
           <div class="hstat">
-            <span class="hstat-val">{{ getLpRank(players()[0]?.lp ?? 0) }}</span>
-            <span class="hstat-label">Lider actual</span>
+            <span class="hstat-val">{{ players()[0]?.username ?? '—' }}</span>
+            <span class="hstat-label">Líder actual</span>
           </div>
         </div>
       </div>

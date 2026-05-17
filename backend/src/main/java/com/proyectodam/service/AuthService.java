@@ -74,6 +74,9 @@ public class AuthService {
         userDto.setAvatarImage(usuario.getAvatarImage());
         userDto.setBio(usuario.getBio());
         userDto.setLevel(1);
+        if (usuario.getCreatedAt() != null) {
+            userDto.setCreatedAt(usuario.getCreatedAt().toString());
+        }
 
         AuthDtos.UserStatsDto stats = new AuthDtos.UserStatsDto();
         stats.setWins(0);

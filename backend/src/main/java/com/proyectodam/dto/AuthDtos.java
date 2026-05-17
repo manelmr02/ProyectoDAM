@@ -47,6 +47,7 @@ public class AuthDtos {
         private String avatarImage;
         private String bio;
         private int level;
+        private String createdAt;
         private UserStatsDto stats;
     }
 
